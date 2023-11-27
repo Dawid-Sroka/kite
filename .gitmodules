@@ -1,0 +1,3 @@
+[submodule "pyrisc"]
+	path = pyrisc
+	url = ./pyrisc
