@@ -1,0 +1,2 @@
+pyelftools==0.29
+riscemu==2.1.1
