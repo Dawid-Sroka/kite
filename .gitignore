@@ -1,4 +1,5 @@
-/venv*
+/.venv*
+/.vscode*
 /src/kite_floating_kernel.egg-info
 /src/kite_floating_kernel/__pycache__
 
