@@ -25,6 +25,24 @@ ELF_ERR_MSG = {
     ELF_ERR_MACH    : 'File %s is not an RISC-V executable file',
 }
 
+# Register aliases:
+
+RA                      = 1
+SP                      = 2
+
+
+REG_SYSCALL_ARG0        = 10
+REG_SYSCALL_ARG1        = 11
+REG_SYSCALL_ARG2        = 12
+REG_SYSCALL_ARG3        = 13
+REG_SYSCALL_ARG4        = 14
+REG_SYSCALL_ARG5        = 15
+
+REG_SYSCALL_NUMBER      = 17
+
+REG_RET_VAL1            = 10
+REG_RET_VAL2            = 11
+
 
 class Kernel:
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
@@ -32,8 +50,21 @@ class Kernel:
         #self.vfs
         self.simulator = simulator
 
+    def syscall(self, process: Process):
+        syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
+        print("syscall number = " + str(syscall_no))
+
     def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
+        if (event == EXC_ECALL):
+            self.syscall(process)
+        elif (event == EXC_CLOCK):
+            # check whether time quantum elapsed
+            # some action of scheduler
+            pass
+        else:
+            raise NotImplementedError
+            # break
 
     def check_elf(self, filename, header):
         e_ident = header['e_ident']
