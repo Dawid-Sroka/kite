@@ -32,7 +32,7 @@ class Kernel:
         #self.vfs
         self.simulator = simulator
 
-    def react_to_event(self, event: Event) -> None:
+    def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
 
     def check_elf(self, filename, header):
@@ -112,7 +112,8 @@ class Kernel:
             cpu_context = process.cpu_context
             self.simulator.load_context_into_cpu(cpu_context)
             cpu_event = self.simulator.run()
-            self.react_to_event(cpu_event)
+            self.simulator.read_context_from_cpu(cpu_context)
+            self.react_to_event(process, cpu_event)
 
     @classmethod
     def create(cls):
