@@ -17,16 +17,16 @@ DMEM_SIZE   = WORD(64 * 1024)
 #--------------------------------------------------------------------------
 
 class CPUContext:
-    def __init__(self, pc: Register, registers: RegisterFile, imem: Memory, dmem: Memory):
+    def __init__(self, pc: Register, regs: RegisterFile, imem: Memory, dmem: Memory):
         self.pc = pc
-        self.registers = registers
+        self.regs = regs
         self.imem = imem
         self.dmem = dmem
 
     @classmethod
     def create(cls):
         pc = Register()
-        registers = RegisterFile()
+        regs = RegisterFile()
         imem   = Memory(IMEM_START, IMEM_SIZE, WORD_SIZE)
         dmem   = Memory(DMEM_START, DMEM_SIZE, WORD_SIZE)
-        return cls(pc, registers, imem, dmem)
+        return cls(pc, regs, imem, dmem)
