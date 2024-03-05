@@ -20,12 +20,14 @@ class Simulator:
     def load_context_into_cpu(self, cpu_context: CPUContext) -> None:
         self.cpu.pc = cpu_context.pc
         self.cpu.registers = cpu_context.registers
-        raise NotImplementedError
+        self.cpu.imem = cpu_context.imem
+        self.cpu.dmem = cpu_context.dmem
 
     def read_context_from_cpu(self, cpu_context: CPUContext) -> None:
         cpu_context.pc = self.cpu.pc
         cpu_context.registers = self.cpu.registers
+        cpu_context.imem = self.cpu.imem
+        cpu_context.dmem = self.cpu.dmem
 
     def run(self) -> Event:
-        return self.cpu.run(self.cpu.pc.read)
-        raise NotImplementedError
+        return self.cpu.run(self.cpu.pc.read())

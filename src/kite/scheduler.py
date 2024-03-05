@@ -15,5 +15,8 @@ class Scheduler:
     def enqueue_process(self, process: Process):
         self.job_queue.put(process)
 
-    def get_process(self) -> Process:
-        return self.job_queue.queue[0]
+    def get_process(self) -> Process | None:
+        if (self.job_queue.empty()):
+            return None
+        else:
+            return self.job_queue.get()

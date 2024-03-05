@@ -1,5 +1,6 @@
-from kite.scheduler import Scheduler
+from kite.cpu_context import CPUContext
 from kite.process import Process
+from kite.scheduler import Scheduler
 from kite.simulator import Simulator, Event
 
 from elftools.elf import elffile as elf
@@ -32,7 +33,7 @@ class Kernel:
         self.simulator = simulator
 
     def react_to_event(self, event: Event) -> None:
-        raise NotImplementedError
+        print(event)
 
     def check_elf(self, filename, header):
         e_ident = header['e_ident']
@@ -55,9 +56,9 @@ class Kernel:
             return ELF_ERR_MACH
         return ELF_OK
 
-    def load_process_from_file(self, program_file) -> Process:
+    def load_process_from_file(self, program_file: str) -> Process:
 
-        cpu = self.simulator.cpu
+        cpu_context = CPUContext.create()
         print("Loading file %s" % program_file)
         try:
             f = open(program_file, 'rb')
@@ -74,16 +75,17 @@ class Kernel:
                 return WORD(0)
 
             entry_point = WORD(efh['e_entry'])
+            cpu_context.pc.write(entry_point)
 
             for seg in ef.iter_segments():
                 addr = seg.header['p_vaddr']
                 memsz = seg.header['p_memsz']
                 if seg.header['p_type'] != 'PT_LOAD':
                     continue
-                if addr >= cpu.imem.mem_start and addr + memsz < cpu.imem.mem_end:
-                    mem = cpu.imem
-                elif addr >= cpu.dmem.mem_start and addr + memsz < cpu.dmem.mem_end:
-                    mem = cpu.dmem
+                if addr >= cpu_context.imem.mem_start and addr + memsz < cpu_context.imem.mem_end:
+                    mem = cpu_context.imem
+                elif addr >= cpu_context.dmem.mem_start and addr + memsz < cpu_context.dmem.mem_end:
+                    mem = cpu_context.dmem
                 else:
                     print("Invalid address range: 0x%08x - 0x%08x" \
                         % (addr, addr + memsz - 1))
@@ -93,9 +95,10 @@ class Kernel:
                     c = int.from_bytes(image[i:i+WORD_SIZE], byteorder='little')
                     mem.access(True, addr, c, M_XWR)
                     addr += WORD_SIZE
-            return entry_point
+        process = Process(cpu_context)
+        return process
 
-    def start(self, init_program) -> None:
+    def start(self, init_program: str) -> None:
         init = self.load_process_from_file(init_program)
         self.scheduler.enqueue_process(init)
 
@@ -104,6 +107,7 @@ class Kernel:
             # Może jednak chcę tutaj używać PID
             process = self.scheduler.get_process()
             if process is None:
+                print("No more processes!")
                 break
             cpu_context = process.cpu_context
             self.simulator.load_context_into_cpu(cpu_context)
