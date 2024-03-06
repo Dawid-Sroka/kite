@@ -20,3 +20,6 @@ class Scheduler:
             return None
         else:
             return self.job_queue.get()
+
+    def remove_process(self) -> None:
+        pass
