@@ -43,21 +43,28 @@ REG_SYSCALL_NUMBER      = 17
 REG_RET_VAL1            = 10
 REG_RET_VAL2            = 11
 
+class Syscall:
+    def __init__(self, scheduler: Scheduler):
+        self.scheduler = scheduler
+        self.syscall_dict = {}
+
 
 class Kernel:
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
         self.scheduler = scheduler
+        self.syscall = Syscall(scheduler)
         #self.vfs
         self.simulator = simulator
 
-    def syscall(self, process: Process):
+    def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         print("syscall number = " + str(syscall_no))
+        return self.syscall.syscall_dict[syscall_no](process)
 
     def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
         if (event == EXC_ECALL):
-            self.syscall(process)
+            self.call_syscall(process)
         elif (event == EXC_CLOCK):
             # check whether time quantum elapsed
             # some action of scheduler
