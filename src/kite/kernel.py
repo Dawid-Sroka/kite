@@ -46,8 +46,11 @@ REG_RET_VAL2            = 11
 class Syscall:
     def __init__(self, scheduler: Scheduler):
         self.scheduler = scheduler
-        self.syscall_dict = {}
+        self.syscall_dict = {60: self.exit}
 
+    def exit(self, process: Process):
+        print("Process exited!")
+        self.scheduler.remove_process()
 
 class Kernel:
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
