@@ -153,7 +153,7 @@ class Kernel:
             cpu_context = process.cpu_context
             self.simulator.load_context_into_cpu(cpu_context)
             cpu_event = self.simulator.run()
-            self.simulator.read_context_from_cpu(cpu_context)
+            cpu_context = self.simulator.read_context_from_cpu()
             self.react_to_event(process, cpu_event)
 
     @classmethod
