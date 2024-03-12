@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext
-from kite.process import Process
+from kite.process import Process, ProcessTable
 from kite.scheduler import Scheduler
 from kite.simulator import Simulator, Event
 
@@ -53,6 +53,7 @@ class Kernel:
 
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
         self.simulator = simulator
+        self.process_table = ProcessTable()
         self.scheduler = scheduler
         #self.vfs
 
@@ -134,6 +135,7 @@ class Kernel:
                     mem.access(True, addr, c, M_XWR)
                     addr += WORD_SIZE
         process = Process(cpu_context)
+        self.process_table.add(process) # nadać pid
         return process
 
     def start(self, init_program: str) -> None:
