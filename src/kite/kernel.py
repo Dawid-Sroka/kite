@@ -150,10 +150,10 @@ class Kernel:
             if process is None:
                 print("No more processes!")
                 break
-            cpu_context = process.cpu_context
-            self.simulator.load_context_into_cpu(cpu_context)
+            self.simulator.load_context_into_cpu(process.cpu_context)
             cpu_event = self.simulator.run()
-            cpu_context = self.simulator.read_context_from_cpu()
+            process.cpu_context = self.simulator.read_context_from_cpu()
+            # procedura react zakłada, że dostaje running proces i możę zmienić jego stan
             self.react_to_event(process, cpu_event)
 
     @classmethod
