@@ -43,26 +43,23 @@ REG_SYSCALL_NUMBER      = 17
 REG_RET_VAL1            = 10
 REG_RET_VAL2            = 11
 
-class Syscall:
-    def __init__(self, scheduler: Scheduler):
-        self.scheduler = scheduler
-        self.syscall_dict = {60: self.exit}
+
+class Kernel:
+    syscall_dict = {60: exit}
 
     def exit(self, process: Process):
         print("Process exited!")
         self.scheduler.remove_process()
 
-class Kernel:
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
-        self.scheduler = scheduler
-        self.syscall = Syscall(scheduler)
-        #self.vfs
         self.simulator = simulator
+        self.scheduler = scheduler
+        #self.vfs
 
     def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         print("syscall number = " + str(syscall_no))
-        return self.syscall.syscall_dict[syscall_no](process)
+        return Kernel.syscall_dict[syscall_no](process)
 
     def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
