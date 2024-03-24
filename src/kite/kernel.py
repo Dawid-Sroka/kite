@@ -45,9 +45,8 @@ REG_RET_VAL2            = 11
 
 
 class Kernel:
-    syscall_dict = {60: exit}
 
-    def exit(self, process: Process):
+    def exit_syscall(self, process: Process):
         print("Process exited!")
         self.scheduler.remove_process()
 
@@ -60,7 +59,7 @@ class Kernel:
     def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         print("syscall number = " + str(syscall_no))
-        return Kernel.syscall_dict[syscall_no](process)
+        return syscall_dict[syscall_no](self, process)
 
     def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
@@ -161,3 +160,6 @@ class Kernel:
         scheduler = Scheduler()
         kernel = cls(simulator, scheduler)
         return kernel
+
+
+syscall_dict = {60: Kernel.exit_syscall}
