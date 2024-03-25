@@ -5,4 +5,4 @@ from kite.kernel import Kernel
 
 kernel = Kernel.create()
 
-kernel.start("../../../lib/prog")
+kernel.start("../../examples/prog")
