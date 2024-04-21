@@ -1,8 +1,9 @@
 from kite.kernel import Kernel
+from pathlib import Path
 
 # parse filename
 # return init_program
 
 kernel = Kernel.create()
 
-kernel.start("../../examples/prog")
+kernel.start(Path(__file__).parents[2] / "examples" / "prog")
