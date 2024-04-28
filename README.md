@@ -23,12 +23,12 @@ pip install -r requirements.txt
 ```
 Now you are ready to run the kernel:
 ```
-cd src/kite
-python __main__.py
+python -m kite
 ```
 or:
 ```
 cd src/kite
-python -m kite
+python __main__.py
 ```
+
 This runs the kernel which loads the program specified in `__main__.py` and executes it as the first userspace program.
