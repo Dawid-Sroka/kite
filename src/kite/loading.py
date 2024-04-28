@@ -3,7 +3,7 @@ from kite.cpu_context import CPUContext
 
 from elftools.elf import elffile as elf
 
-def parse_cpu_context_from_file(program_file: str):
+def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
     cpu_context = CPUContext.create()
     print("Loading file %s" % program_file)
     try:
