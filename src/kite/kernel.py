@@ -6,43 +6,6 @@ from kite.simulator import Simulator, Event
 from elftools.elf import elffile as elf
 from kite.consts import *
 
-# --------------------------------------------------------------------------
-#   Program: loads an ELF file into memory and supports disassembling
-# --------------------------------------------------------------------------
-
-ELF_OK              = 0
-ELF_ERR_OPEN        = 1
-ELF_ERR_CLASS       = 2
-ELF_ERR_DATA        = 3
-ELF_ERR_TYPE        = 4
-ELF_ERR_MACH        = 5
-
-ELF_ERR_MSG = {
-    ELF_ERR_OPEN    : 'File %s not found',
-    ELF_ERR_CLASS   : 'File %s is not a 32-bit ELF file',
-    ELF_ERR_DATA    : 'File %s is not a little-endian ELF file',
-    ELF_ERR_TYPE    : 'File %s is not an executable file',
-    ELF_ERR_MACH    : 'File %s is not an RISC-V executable file',
-}
-
-# Register aliases:
-
-RA                      = 1
-SP                      = 2
-
-
-REG_SYSCALL_ARG0        = 10
-REG_SYSCALL_ARG1        = 11
-REG_SYSCALL_ARG2        = 12
-REG_SYSCALL_ARG3        = 13
-REG_SYSCALL_ARG4        = 14
-REG_SYSCALL_ARG5        = 15
-
-REG_SYSCALL_NUMBER      = 17
-
-REG_RET_VAL1            = 10
-REG_RET_VAL2            = 11
-
 
 class Kernel:
 
