@@ -3,9 +3,8 @@ from kite.process import Process, ProcessTable
 from kite.scheduler import Scheduler
 from kite.simulator import Simulator, Event
 
-from elftools.elf import elffile as elf
 from kite.consts import *
-from kite.loading import check_elf
+from kite.loading import check_elf, parse_cpu_context_from_file
 
 class Kernel:
 
@@ -37,44 +36,7 @@ class Kernel:
             # break
 
     def load_process_from_file(self, program_file: str) -> Process:
-
-        cpu_context = CPUContext.create()
-        print("Loading file %s" % program_file)
-        try:
-            f = open(program_file, 'rb')
-        except IOError:
-            print(ELF_ERR_MSG[ELF_ERR_OPEN] % program_file)
-            return WORD(0)
-
-        with f:
-            ef = elf.ELFFile(f)
-            efh = ef.header
-            ret = check_elf(program_file, efh)
-            if ret != ELF_OK:
-                print(ELF_ERR_MSG[ret] % program_file)
-                return WORD(0)
-
-            entry_point = WORD(efh['e_entry'])
-            cpu_context.pc.write(entry_point)
-
-            for seg in ef.iter_segments():
-                addr = seg.header['p_vaddr']
-                memsz = seg.header['p_memsz']
-                if seg.header['p_type'] != 'PT_LOAD':
-                    continue
-                if addr >= cpu_context.imem.mem_start and addr + memsz < cpu_context.imem.mem_end:
-                    mem = cpu_context.imem
-                elif addr >= cpu_context.dmem.mem_start and addr + memsz < cpu_context.dmem.mem_end:
-                    mem = cpu_context.dmem
-                else:
-                    print("Invalid address range: 0x%08x - 0x%08x" \
-                        % (addr, addr + memsz - 1))
-                    continue
-                image = seg.data()
-                for i in range(0, len(image), WORD_SIZE):
-                    c = int.from_bytes(image[i:i+WORD_SIZE], byteorder='little')
-                    mem.access(True, addr, c, M_XWR)
-                    addr += WORD_SIZE
+        cpu_context = parse_cpu_context_from_file(program_file)
         process = Process(cpu_context)
         self.process_table.add(process) # nadać pid
         return process
