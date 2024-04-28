@@ -8,38 +8,18 @@ from kite.loading import check_elf, parse_cpu_context_from_file
 
 class Kernel:
 
-    def exit_syscall(self, process: Process):
-        print("Process exited!")
-        self.scheduler.remove_process()
-
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
         self.simulator = simulator
         self.process_table = ProcessTable()
         self.scheduler = scheduler
         #self.vfs
 
-    def call_syscall(self, process: Process):
-        syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
-        print("syscall number = " + str(syscall_no))
-        return syscall_dict[syscall_no](self, process)
-
-    def react_to_event(self, process: Process, event: Event) -> None:
-        print(event)
-        if (event == EXC_ECALL):
-            self.call_syscall(process)
-        elif (event == EXC_CLOCK):
-            # check whether time quantum elapsed
-            # some action of scheduler
-            pass
-        else:
-            raise NotImplementedError
-            # break
-
-    def load_process_from_file(self, program_file: str) -> Process:
-        cpu_context = parse_cpu_context_from_file(program_file)
-        process = Process(cpu_context)
-        self.process_table.add(process) # nadać pid
-        return process
+    @classmethod
+    def create(cls):
+        simulator = Simulator.create()
+        scheduler = Scheduler()
+        kernel = cls(simulator, scheduler)
+        return kernel
 
     def start(self, init_program: str) -> None:
         init = self.load_process_from_file(init_program)
@@ -58,12 +38,36 @@ class Kernel:
             # procedura react zakłada, że dostaje running proces i możę zmienić jego stan
             self.react_to_event(process, cpu_event)
 
-    @classmethod
-    def create(cls):
-        simulator = Simulator.create()
-        scheduler = Scheduler()
-        kernel = cls(simulator, scheduler)
-        return kernel
+    def load_process_from_file(self, program_file: str) -> Process:
+        cpu_context = parse_cpu_context_from_file(program_file)
+        process = Process(cpu_context)
+        self.process_table.add(process) # nadać pid
+        return process
+
+    def react_to_event(self, process: Process, event: Event) -> None:
+        print(event)
+        if (event == EXC_ECALL):
+            self.call_syscall(process)
+        elif (event == EXC_CLOCK):
+            # check whether time quantum elapsed
+            # some action of scheduler
+            pass
+        else:
+            raise NotImplementedError
+            # break
+
+# --------------------------------------------------------------------------
+#   syscall implementations
+# --------------------------------------------------------------------------
+
+    def call_syscall(self, process: Process):
+        syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
+        print("syscall number = " + str(syscall_no))
+        return syscall_dict[syscall_no](self, process)
+
+    def exit_syscall(self, process: Process):
+        print("Process exited!")
+        self.scheduler.remove_process()
 
 
 syscall_dict = {60: Kernel.exit_syscall}
