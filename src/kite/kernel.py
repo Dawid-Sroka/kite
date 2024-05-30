@@ -46,9 +46,9 @@ class Kernel:
 
     def react_to_event(self, process: Process, event: Event) -> None:
         print(event)
-        if (event == EXC_ECALL):
+        if event == EXC_ECALL:
             self.call_syscall(process)
-        elif (event == EXC_CLOCK):
+        elif event == EXC_CLOCK:
             # check whether time quantum elapsed
             # some action of scheduler
             pass
