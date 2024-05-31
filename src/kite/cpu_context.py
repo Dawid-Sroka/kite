@@ -1,6 +1,7 @@
 from pyrisc.sim.components import Register, RegisterFile, Memory
 from kite.consts import *
 
+from pyrisc.sim.components import PageTable
 
 #--------------------------------------------------------------------------
 #   Configurations
@@ -17,11 +18,12 @@ DMEM_SIZE   = WORD(64 * 1024)
 #--------------------------------------------------------------------------
 
 class CPUContext:
-    def __init__(self, pc: Register, regs: RegisterFile, imem: Memory, dmem: Memory):
+    def __init__(self, pc: Register, regs: RegisterFile, imem: Memory, dmem: Memory, pt: PageTable):
         self.pc = pc
         self.regs = regs
         self.imem = imem
         self.dmem = dmem
+        self.page_table = pt
 
     @classmethod
     def create(cls):
@@ -29,4 +31,5 @@ class CPUContext:
         regs = RegisterFile()
         imem   = Memory(IMEM_START, IMEM_SIZE, WORD_SIZE)
         dmem   = Memory(DMEM_START, DMEM_SIZE, WORD_SIZE)
-        return cls(pc, regs, imem, dmem)
+        page_table = PageTable()
+        return cls(pc, regs, imem, dmem, page_table)

@@ -40,6 +40,7 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
             for i in range(0, len(image), WORD_SIZE):
                 c = int.from_bytes(image[i:i+WORD_SIZE], byteorder='little')
                 mem.access(True, addr, c, M_XWR)
+                cpu_context.page_table.access(True, addr, c, M_XWR)
                 addr += WORD_SIZE
     return cpu_context
 

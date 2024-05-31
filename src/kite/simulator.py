@@ -22,9 +22,10 @@ class Simulator:
         self.cpu.regs = cpu_context.regs
         self.cpu.imem = cpu_context.imem
         self.cpu.dmem = cpu_context.dmem
+        self.cpu.page_table = cpu_context.page_table
 
     def read_context_from_cpu(self) -> CPUContext:
-        return CPUContext(self.cpu.pc, self.cpu.regs, self.cpu.imem, self.cpu.dmem)
+        return CPUContext(self.cpu.pc, self.cpu.regs, self.cpu.imem, self.cpu.dmem, self.cpu.page_table)
 
     def run(self) -> Event:
         return self.cpu.run(self.cpu.pc.read())
