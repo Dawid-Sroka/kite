@@ -45,7 +45,7 @@ class Kernel:
         return process
 
     def react_to_event(self, process: Process, event: Event) -> None:
-        print(event)
+        print("event: " + EXC_MSG[event])
         if event == EXC_ECALL:
             self.call_syscall(process)
         elif event == EXC_CLOCK:
