@@ -28,18 +28,17 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
             memsz = seg.header['p_memsz']
             if seg.header['p_type'] != 'PT_LOAD':
                 continue
-            if addr >= cpu_context.imem.mem_start and addr + memsz < cpu_context.imem.mem_end:
-                mem = cpu_context.imem
-            elif addr >= cpu_context.dmem.mem_start and addr + memsz < cpu_context.dmem.mem_end:
-                mem = cpu_context.dmem
-            else:
-                print("Invalid address range: 0x%08x - 0x%08x" \
-                    % (addr, addr + memsz - 1))
-                continue
+            # if addr >= cpu_context.imem.mem_start and addr + memsz < cpu_context.imem.mem_end:
+            #     mem = cpu_context.imem
+            # elif addr >= cpu_context.dmem.mem_start and addr + memsz < cpu_context.dmem.mem_end:
+            #     mem = cpu_context.dmem
+            # else:
+            #     print("Invalid address range: 0x%08x - 0x%08x" \
+            #         % (addr, addr + memsz - 1))
+            #     continue
             image = seg.data()
             for i in range(0, len(image), WORD_SIZE):
                 c = int.from_bytes(image[i:i+WORD_SIZE], byteorder='little')
-                mem.access(True, addr, c, M_XWR)
                 cpu_context.page_table.access(True, addr, c, M_XWR)
                 addr += WORD_SIZE
     return cpu_context
