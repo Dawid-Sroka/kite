@@ -6,6 +6,8 @@ from kite.simulator import Simulator, Event
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
 
+from pathlib import Path
+
 class Kernel:
 
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
@@ -83,7 +85,17 @@ class Kernel:
     def write_syscall(self, process: Process):
         print("I write!")
 
+    def execve_syscall(self, process: Process):
+        print("execve invoked!")
+        file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        file_name = self.get_string_from_memory(process, file_name_pointer)
+        print("execve file_name:", file_name)
+        path = Path(__file__).parents[2] / "binaries" / file_name
+        new_context = parse_cpu_context_from_file(path)
+        process.cpu_context = new_context
+
 syscall_dict = {
                 1:  Kernel.write_syscall,
+                59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall
                 }

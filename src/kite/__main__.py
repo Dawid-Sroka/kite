@@ -6,4 +6,4 @@ from pathlib import Path
 
 kernel = Kernel.create()
 
-kernel.start(Path(__file__).parents[2] / "binaries" / "simply_exit")
+kernel.start(Path(__file__).parents[2] / "binaries" / "simply_execve")
