@@ -70,4 +70,14 @@ class Kernel:
         self.scheduler.remove_process()
 
 
+    def get_string_from_memory(self, process: Process, string_pointer: int):
+        d = ""
+        virt_mem = process.cpu_context.page_table
+        c = virt_mem.get_byte(string_pointer)
+        while c != 0:
+            d += chr(c)
+            string_pointer += 1
+            c = virt_mem.get_byte(string_pointer)
+        return d
+
 syscall_dict = {60: Kernel.exit_syscall}
