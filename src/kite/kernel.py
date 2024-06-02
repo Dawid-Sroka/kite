@@ -80,6 +80,10 @@ class Kernel:
             c = virt_mem.get_byte(string_pointer)
         return d
 
+    def write_syscall(self, process: Process):
+        print("I write!")
+
 syscall_dict = {
+                1:  Kernel.write_syscall,
                 60: Kernel.exit_syscall
                 }
