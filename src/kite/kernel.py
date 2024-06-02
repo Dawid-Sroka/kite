@@ -80,4 +80,6 @@ class Kernel:
             c = virt_mem.get_byte(string_pointer)
         return d
 
-syscall_dict = {60: Kernel.exit_syscall}
+syscall_dict = {
+                60: Kernel.exit_syscall
+                }
