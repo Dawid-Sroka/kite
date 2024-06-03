@@ -1,12 +1,7 @@
 from kite.cpu_context import CPUContext
 
 from pyrisc.sim.snurisc import SNURISC as CPU
-
-
-class Event:
-    def __init__(self, exception_type: int):
-        self.exc_t = exception_type
-
+from pyrisc.sim.sim import Event
 
 class Simulator:
     def __init__(self, cpu: CPU):

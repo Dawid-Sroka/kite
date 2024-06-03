@@ -1,12 +1,14 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
 from kite.process import Process, ProcessTable
 from kite.scheduler import Scheduler
-from kite.simulator import Simulator, Event
+from kite.simulator import Simulator
 
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
 
 from pathlib import Path
+
+from pyrisc.sim.sim import Event, MemEvent
 
 class Kernel:
 
