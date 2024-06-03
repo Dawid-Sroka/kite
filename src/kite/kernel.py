@@ -51,13 +51,24 @@ class Kernel:
         return process
 
     def react_to_event(self, process: Process, event: Event) -> None:
-        print("event: " + EXC_MSG[event])
-        if event == EXC_ECALL:
+        # event, addr = cpu_event
+        event_t = event.type
+        print("event: " + EXC_MSG[event_t])
+        # Add Interrupt Descriptor Table??
+        if event_t == EXC_ECALL:
             self.call_syscall(process)
-        elif event == EXC_CLOCK:
+        elif event_t == EXC_CLOCK:
             # check whether time quantum elapsed
             # some action of scheduler
             pass
+        elif event_t == EXC_PAGE_FAULT:
+            fault_addr = event.fault_addr
+            print("fault_addr:", hex(fault_addr))
+            for area in process.vm_areas:
+                if area.does_contain_address(fault_addr):
+                    process.cpu_context.page_table.add_page_containing_addr(fault_addr)
+                    return None
+            raise NotImplementedError
         else:
             raise NotImplementedError
             # break
