@@ -2,7 +2,8 @@ from kite.cpu_context import CPUContext
 
 
 class Process:
-    def __init__(self, cpu_context: CPUContext):
+    def __init__(self, vm_areas, cpu_context: CPUContext):
+        self.vm_areas = vm_areas
         self.cpu_context = cpu_context
 
 class ProcessTable:

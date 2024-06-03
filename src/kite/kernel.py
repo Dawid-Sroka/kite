@@ -1,4 +1,4 @@
-from kite.cpu_context import CPUContext
+from kite.cpu_context import CPUContext, VMAreaStruct
 from kite.process import Process, ProcessTable
 from kite.scheduler import Scheduler
 from kite.simulator import Simulator, Event
@@ -41,8 +41,10 @@ class Kernel:
             self.react_to_event(process, cpu_event)
 
     def load_process_from_file(self, program_file: str) -> Process:
+        vm_areas = [VMAreaStruct(0x80000000, 0x8000FFFF, 0, 0),
+                    VMAreaStruct(0x80010000, 0x8001FFFF, 0, 0)]
         cpu_context = parse_cpu_context_from_file(program_file)
-        process = Process(cpu_context)
+        process = Process(vm_areas, cpu_context)
         self.process_table.add(process) # nadać pid
         return process
 

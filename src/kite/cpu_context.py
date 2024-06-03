@@ -17,6 +17,23 @@ DMEM_START  = WORD(0x80010000)      # DMEM: 0x80010000 - 0x8001ffff (64KB)
 DMEM_SIZE   = WORD(64 * 1024)
 #--------------------------------------------------------------------------
 
+class VMAreas:
+    def __init__(self):
+        self.vm_areas_list = []
+
+class VMAreaStruct:
+    def __init__(self, vm_start, vm_end, vm_prot, vm_flags):
+        self.vm_start = vm_start
+        self.vm_end = vm_end
+        self.vm_prot = vm_prot
+        self.vm_flags = vm_flags
+
+    def does_contain_address(self, virt_addr):
+        if self.vm_start <= virt_addr and virt_addr < self.vm_end:
+            return True
+        else:
+            return False
+
 class CPUContext:
     def __init__(self, pc: Register, regs: RegisterFile, pt: PageTable):
         self.pc = pc
