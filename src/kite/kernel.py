@@ -43,10 +43,8 @@ class Kernel:
             self.react_to_event(process, cpu_event)
 
     def load_process_from_file(self, program_file: str) -> Process:
-        vm_areas = [VMAreaStruct(0x80000000, 0x8000FFFF, 0, 0),
-                    VMAreaStruct(0x80010000, 0x8001FFFF, 0, 0)]
         cpu_context = parse_cpu_context_from_file(program_file)
-        process = Process(vm_areas, cpu_context)
+        process = Process(cpu_context)
         self.process_table.add(process) # nadać pid
         return process
 
@@ -64,11 +62,11 @@ class Kernel:
         elif event_t == EXC_PAGE_FAULT:
             fault_addr = event.fault_addr
             print("fault_addr:", hex(fault_addr))
-            for area in process.vm_areas:
-                if area.does_contain_address(fault_addr):
-                    process.cpu_context.page_table.add_page_containing_addr(fault_addr)
-                    return None
-            raise NotImplementedError
+            area = process.cpu_context.vm.get_area_by_va(fault_addr)
+            if area is not None:
+                process.cpu_context.vm.add_page_containing_addr(fault_addr)
+            else:
+                raise NotImplementedError
         else:
             raise NotImplementedError
             # break
