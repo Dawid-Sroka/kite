@@ -1,10 +1,13 @@
 from kite.consts import *
-from kite.cpu_context import CPUContext
+from kite.cpu_context import CPUContext, VMAreas, VMAreaStruct
 
 from elftools.elf import elffile as elf
 
 def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
     cpu_context = CPUContext.create()
+    vm_areas_list = [VMAreaStruct(0x80000000, 0x00010000, 0, 0),
+                     VMAreaStruct(0x80010000, 0x00010000, 0, 0)]
+    cpu_context.vm.vm_areas_list = vm_areas_list
     print("Loading file %s" % program_file)
     try:
         f = open(program_file, 'rb')
@@ -39,7 +42,7 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
             image = seg.data()
             for i in range(0, len(image), WORD_SIZE):
                 c = int.from_bytes(image[i:i+WORD_SIZE], byteorder='little')
-                cpu_context.page_table.access(True, addr, c, M_XWR)
+                cpu_context.vm.copy_into_vm(addr, c)
                 addr += WORD_SIZE
     return cpu_context
 
