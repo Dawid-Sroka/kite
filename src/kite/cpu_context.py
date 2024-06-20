@@ -1,7 +1,7 @@
 from pyrisc.sim.components import Register, RegisterFile, Memory
 from kite.consts import *
 
-from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK
+from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK, VPO_MASK
 
 #--------------------------------------------------------------------------
 #   Configurations
@@ -82,6 +82,27 @@ class VMAreas(TranslatesAddresses):
                 area.cached_pages[vpn] = PageTableEntry(vpn)
         else:
             raise NotImplementedError
+
+    def get_byte(self, pointer: int):
+        vpn = pointer >> VPO_LENTGH
+        vpo = (pointer & VPO_MASK) // WORD_SIZE
+        pte = self.translate(vpn)
+        if pte == None:
+            # there's no such page in pt
+            # kernel must do something
+            print("SIGSEGV")
+            raise NotImplementedError
+        if pte.protections:
+            page = pte.physical_page
+            ppo = vpo
+            mem_word = page[ppo]
+            offset = pointer % 4
+            mem_byte = (mem_word >> offset * 8) & 0xFF
+            return mem_byte
+        else:
+            print("SIGSEGV")
+            raise NotImplementedError
+
 
 class CPUContext:
     def __init__(self, pc: Register, regs: RegisterFile, vm_areas: VMAreas):
