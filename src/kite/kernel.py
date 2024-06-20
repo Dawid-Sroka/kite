@@ -59,12 +59,21 @@ class Kernel:
             # check whether time quantum elapsed
             # some action of scheduler
             pass
-        elif event_t == EXC_PAGE_FAULT:
+        # elif event_t == EXC_PAGE_FAULT:
+        elif isinstance(event, MemEvent):
             fault_addr = event.fault_addr
-            print("fault_addr:", hex(fault_addr))
-            area = process.cpu_context.vm.get_area_by_va(fault_addr)
-            if area is not None:
-                process.cpu_context.vm.add_page_containing_addr(fault_addr)
+            print(" fault_addr:", hex(fault_addr))
+            print(" fault_pc:", hex(process.cpu_context.pc.read()))
+            if event_t == EXC_PAGE_FAULT_PERMS:
+                print(" SIGSEGV")
+                raise NotImplementedError
+            elif event_t == EXC_PAGE_FAULT_MISS:
+                area = process.cpu_context.vm.get_area_by_va(fault_addr)
+                if area is not None:
+                    process.cpu_context.vm.add_page_containing_addr(fault_addr)
+                else:
+                    print(" SIGSEGV")
+                    raise NotImplementedError
             else:
                 raise NotImplementedError
         else:
