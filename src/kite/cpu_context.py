@@ -39,6 +39,8 @@ class VMAreas(TranslatesAddresses):
 
     def translate(self,vpn) -> PageTableEntry | None:
         area = self.get_area_by_vpn(vpn)
+        if area is None:
+            return None
         pte = area.get_page(vpn)
         return pte
 
