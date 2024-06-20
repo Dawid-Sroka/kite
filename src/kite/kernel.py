@@ -86,11 +86,11 @@ class Kernel:
 
     def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
-        print("syscall number = " + str(syscall_no))
+        print(" syscall number = " + str(syscall_no))
         return syscall_dict[syscall_no](self, process)
 
     def exit_syscall(self, process: Process):
-        print("Process exited!")
+        print(" Process exited!")
         self.scheduler.remove_process()
 
 
@@ -105,13 +105,13 @@ class Kernel:
         return d
 
     def write_syscall(self, process: Process):
-        print("I write!")
+        print(" I write!")
 
     def execve_syscall(self, process: Process):
-        print("execve invoked!")
+        print(" execve invoked!")
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
-        print("execve file_name:", file_name)
+        print(" execve file_name:", file_name)
         path = Path(__file__).parents[2] / "binaries" / file_name
         new_context = parse_cpu_context_from_file(path)
         process.cpu_context = new_context
