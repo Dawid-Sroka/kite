@@ -186,14 +186,16 @@ MT_WU               = 7
 #--------------------------------------------------------------------------
 
 EXC_NONE            = 0         # EXC_NONE should be zero
-EXC_PAGE_FAULT      = 1
+EXC_PAGE_FAULT_MISS = 1
+EXC_PAGE_FAULT_PERMS= 2
 EXC_ILLEGAL_INST    = 4
 EXC_EBREAK          = 8
 EXC_ECALL           = 16        ## ? takie są exception codes na riscv?
 EXC_CLOCK           = 32        ## przerwanie zegarowe
 
 EXC_MSG = {
-                    EXC_PAGE_FAULT:     "page fault",
+                    EXC_PAGE_FAULT_MISS: "page fault - page not present",
+                    EXC_PAGE_FAULT_PERMS: "page fault - permissions error",
                     EXC_ILLEGAL_INST:   "illegal instruction",
                     EXC_EBREAK:         "ebreak",
                     EXC_ECALL:          "syscall",
