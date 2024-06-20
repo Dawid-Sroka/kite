@@ -96,7 +96,7 @@ class Kernel:
 
     def get_string_from_memory(self, process: Process, string_pointer: int):
         d = ""
-        virt_mem = process.cpu_context.page_table
+        virt_mem = process.cpu_context.vm
         c = virt_mem.get_byte(string_pointer)
         while c != 0:
             d += chr(c)
