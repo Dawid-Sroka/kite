@@ -1,6 +1,7 @@
 from pyrisc.sim.components import Register, RegisterFile, Memory
 from kite.consts import *
 
+from pyrisc.sim.consts import *
 from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK, VPO_MASK
 
 #--------------------------------------------------------------------------
@@ -53,7 +54,7 @@ class VMAreas(TranslatesAddresses):
         area = self.get_area_by_vpn(vpn)
         if area != None:
             if vpn not in area.cached_pages.keys():
-                area.cached_pages[vpn] = PageTableEntry(vpn)
+                area.cached_pages[vpn] = PageTableEntry(vpn, area.vm_prot)
                 area.cached_pages[vpn].physical_page[vpo] = data
             else:
                 area.cached_pages[vpn].physical_page[vpo] = data
@@ -79,7 +80,7 @@ class VMAreas(TranslatesAddresses):
         area = self.get_area_by_va(addr)
         if area != None:
             if vpn not in area.cached_pages.keys():
-                area.cached_pages[vpn] = PageTableEntry(vpn)
+                area.cached_pages[vpn] = PageTableEntry(vpn, area.vm_prot)
         else:
             raise NotImplementedError
 
@@ -92,7 +93,7 @@ class VMAreas(TranslatesAddresses):
             # kernel must do something
             print("SIGSEGV")
             raise NotImplementedError
-        if pte.protections:
+        if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
             page = pte.physical_page
             ppo = vpo
             mem_word = page[ppo]
