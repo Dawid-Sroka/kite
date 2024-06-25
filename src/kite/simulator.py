@@ -1,4 +1,4 @@
-from kite.cpu_context import CPUContext, VMAreas
+from kite.cpu_context import CPUContext, VMAreas, M_READ_ONLY, M_READ_WRITE
 
 from pyrisc.sim.snurisc import SNURISC as CPU
 from pyrisc.sim.sim import Event

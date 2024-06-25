@@ -1,12 +1,12 @@
 from kite.consts import *
-from kite.cpu_context import CPUContext, VMAreas, VMAreaStruct
+from kite.cpu_context import CPUContext, VMAreas, VMAreaStruct, M_READ_ONLY, M_READ_WRITE
 
 from elftools.elf import elffile as elf
 
 def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
     cpu_context = CPUContext.create()
-    vm_areas_list = [VMAreaStruct(0x80000000, 0x00010000, 0, 0),
-                     VMAreaStruct(0x80010000, 0x00010000, 0, 0)]
+    vm_areas_list = [VMAreaStruct(0x80000000, 0x00010000, M_READ_ONLY, 0),
+                     VMAreaStruct(0x80010000, 0x00010000, M_READ_WRITE, 0)]
     cpu_context.vm.vm_areas_list = vm_areas_list
     print("Loading file %s" % program_file)
     try:
