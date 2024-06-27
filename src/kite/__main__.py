@@ -1,9 +1,13 @@
 from kite.kernel import Kernel
 from pathlib import Path
 
-# parse filename
-# return init_program
+from sys import argv
 
 kernel = Kernel.create()
 
-kernel.start(Path(__file__).parents[2] / "binaries" / "simply_execve")
+if len(argv) > 1:
+    program_name = argv[1]
+else:
+    program_name = "simply_exit"
+
+kernel.start(Path(__file__).parents[2] / "binaries" / program_name)
