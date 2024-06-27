@@ -1,0 +1,4 @@
+# files related to compiling C programs
+*.o
+*.objdump
+*.elf
