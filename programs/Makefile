@@ -8,7 +8,7 @@ CFLAGS      = -O0 -march=rv32i -mabi=ilp32 -static
 LDFLAGS     = -L. -T./link.ld -nostdlib -nostartfiles
 OBJDFLAGS   = -D --section=.text --section=.data
 
-KITELIB 	= crt0.s exit.s execve.s write.s
+KITELIB 	= crt0.s exit.s execve.s fork.s write.s
 
 PROG ?= simply_exit
 BINARIES_PATH = ../binaries

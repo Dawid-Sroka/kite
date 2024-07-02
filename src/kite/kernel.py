@@ -8,6 +8,7 @@ from kite.loading import check_elf, parse_cpu_context_from_file
 
 from pathlib import Path
 import inspect
+from copy import deepcopy, copy
 
 from pyrisc.sim.sim import Event, MemEvent
 
@@ -46,12 +47,13 @@ class Kernel:
         new_pid = max(self.process_table.keys()) + 1
         process.pid = new_pid
         self.process_table[new_pid] = process
-        return
+        return new_pid
 
     def thread(self, pid):
         process = self.process_table[pid]
         # event loop
         while True:
+            print("PID =", pid)
             self.simulator.load_context_into_cpu(process.cpu_context)
             cpu_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
@@ -126,6 +128,15 @@ class Kernel:
     def write_syscall(self, process: Process):
         print(" I write!")
 
+    def fork_syscall(self, process: Process):
+        print(" fork invoked!")
+        child_cpu_context = deepcopy(process.cpu_context)
+        child = Process(child_cpu_context)
+        child_pid = self.add_new_process(child)
+        child_thread = self.thread(child_pid)
+        self.scheduler.enqueue_thread(child_thread)
+
+
     def execve_syscall(self, process: Process):
         print(" execve invoked!")
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
@@ -137,6 +148,7 @@ class Kernel:
 
 syscall_dict = {
                 1:  Kernel.write_syscall,
+                57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall
                 }
