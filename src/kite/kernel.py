@@ -133,6 +133,7 @@ class Kernel:
         child_cpu_context = deepcopy(process.cpu_context)
         child = Process(child_cpu_context)
         child_pid = self.add_new_process(child)
+        process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child_thread = self.thread(child_pid)
         self.scheduler.enqueue_thread(child_thread)
 

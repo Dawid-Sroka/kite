@@ -1,7 +1,13 @@
 #include <unistd.h>
 
 int main() {
-  fork();
-  // execve("simply_exit");
+  int pid = fork();
+  if (pid == 0) { // child
+    execve("simply_write");
+
+  } else {        // parent
+    //read();
+    write();
+  }
   _exit();
 }
