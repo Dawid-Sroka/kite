@@ -6,15 +6,16 @@ class Scheduler:
     def __init__(self):
         self.ready_queue = []
 
-    def enqueue_process(self, process: Process):
-        self.ready_queue.append(process)
+    def enqueue_thread(self, thread):
+        self.ready_queue.append(thread)
 
-    def get_process(self) -> Process | None:
+    # returns thread or None
+    def get_thread(self):
         if len(self.ready_queue) == 0:
             return None
         else:
-            process = self.ready_queue[0]
-            return process
+            thread = self.ready_queue[0]
+            return thread
 
-    def remove_process(self) -> None:
+    def remove_thread(self) -> None:
         self.ready_queue.pop(0)
