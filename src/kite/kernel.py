@@ -137,7 +137,7 @@ class Kernel:
         file_name = self.get_string_from_memory(process, file_name_pointer)
         print(" open file_name:", file_name)
         path = Path(__file__).parents[2] / "binaries" / file_name
-        f = open(path, 'r+')
+        f = open(path, 'a+')
         process.fdt[3] = f
         print(process.fdt)
 
