@@ -37,10 +37,16 @@ class Kernel:
         while True:
             thread = self.scheduler.get_thread()
             if thread is None:
-                print("No more processes!")
-                break
+                if len(self.scheduler.blocked_queue) > 0:
+                    thread = self.scheduler.blocked_queue[0]
+                    self.scheduler.move_to_ready(thread)
+                else:
+                    print("No more processes!")
+                    break
 
             result = next(thread)
+            if result == "blocked":
+                self.scheduler.move_to_blocked(thread)
             print(result)
 
     def add_new_process(self, process: Process):
