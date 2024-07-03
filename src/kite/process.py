@@ -5,6 +5,7 @@ class Process:
     def __init__(self, cpu_context: CPUContext):
         self.cpu_context = cpu_context
         self.pid = -1
+        self.fdt = {}
 
 class ProcessTable:
     def __init__(self):

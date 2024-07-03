@@ -131,8 +131,42 @@ class Kernel:
             c = virt_mem.get_byte(string_pointer)
         return d
 
+    def open_syscall(self, process: Process):
+        print(" open invoked!")
+        file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        file_name = self.get_string_from_memory(process, file_name_pointer)
+        print(" open file_name:", file_name)
+        path = Path(__file__).parents[2] / "binaries" / file_name
+        f = open(path, 'r+')
+        process.fdt[3] = f
+        print(process.fdt)
+
+    def read_syscall(self, process: Process):
+        print(" read invoked!")
+        f = process.fdt[3]
+        position = 0
+        f.seek(position)
+        bytes_to_read = 5
+        while bytes_to_read > 0:
+            print(bytes_to_read)
+            bytes_read = f.read(bytes_to_read)
+            if bytes_read == '':
+                print("     read blocked! What should happen now?")
+                yield "blocked"
+            print(bytes_read)
+            bytes_to_read -= len(bytes_read)
+            position += len(bytes_read)
+            f.seek(position)
+        return
+
+
     def write_syscall(self, process: Process):
-        print(" I write!")
+        print(" write invoked!")
+        f = process.fdt[3]
+        position = 0
+        f.seek(position)
+        f.write("written\n")
+        f.flush()
 
     def fork_syscall(self, process: Process):
         print(" fork invoked!")
@@ -154,7 +188,9 @@ class Kernel:
         process.cpu_context = new_context
 
 syscall_dict = {
+                0:  Kernel.read_syscall,
                 1:  Kernel.write_syscall,
+                2:  Kernel.open_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall
