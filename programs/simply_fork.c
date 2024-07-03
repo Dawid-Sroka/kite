@@ -6,8 +6,8 @@ int main() {
     execve("simply_write");
 
   } else {        // parent
-    open("file.txt");
-    read();
+    int fd = open("file.txt");
+    read(fd);
   }
   _exit();
 }

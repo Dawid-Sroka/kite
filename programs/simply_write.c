@@ -1,7 +1,7 @@
 #include <unistd.h>
 
 int main() {
-  open("file.txt");
-  write();
+  int fd = open("file.txt");
+  write(fd);
   _exit();
 }

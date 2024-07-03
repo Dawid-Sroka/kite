@@ -138,12 +138,15 @@ class Kernel:
         print(" open file_name:", file_name)
         path = Path(__file__).parents[2] / "binaries" / file_name
         f = open(path, 'a+')
-        process.fdt[3] = f
+        fd = max(process.fdt.keys()) + 1
+        process.fdt[fd] = f
+        process.cpu_context.regs.write(REG_RET_VAL1, fd)
         print(process.fdt)
 
     def read_syscall(self, process: Process):
         print(" read invoked!")
-        f = process.fdt[3]
+        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        f = process.fdt[fd]
         position = 0
         f.seek(position)
         bytes_to_read = 5
@@ -162,7 +165,8 @@ class Kernel:
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
-        f = process.fdt[3]
+        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        f = process.fdt[fd]
         position = 0
         f.seek(position)
         f.write("written\n")
