@@ -29,9 +29,9 @@ class Kernel:
 
     def start(self, init_program: str) -> None:
         init = self.load_process_from_file(init_program)
-        init.pid = 0
-        self.process_table[0] = init
-        init_thread = self.thread(0)
+        init.pid = 1
+        self.process_table[1] = init
+        init_thread = self.thread(1)
         self.scheduler.enqueue_thread(init_thread)
 
         while True:
