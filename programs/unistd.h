@@ -5,6 +5,7 @@ void read(int fd);
 void pipe(int pipefd[2]);
 void execve(char* path);
 int fork();
+void wait();
 int errno;
 
 void debug_print(void* ptr);
