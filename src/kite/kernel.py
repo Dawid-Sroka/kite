@@ -10,6 +10,7 @@ from pathlib import Path
 import inspect
 import os
 from copy import deepcopy, copy
+from time import sleep
 
 from pyrisc.sim.sim import Event, MemEvent
 
@@ -36,7 +37,10 @@ class Kernel:
         self.scheduler.enqueue_thread(init_thread)
 
         while True:
+            sleep(1)
             thread = self.scheduler.get_thread()
+            print("ready", self.scheduler.ready_queue)
+            print("blocked", self.scheduler.blocked_queue)
             if thread is None:
                 if len(self.scheduler.blocked_queue) > 0:
                     thread = self.scheduler.blocked_queue[0]
@@ -48,7 +52,8 @@ class Kernel:
             result = next(thread)
             if result == "blocked":
                 self.scheduler.move_to_blocked(thread)
-            print(result)
+            # self.scheduler.shift_queue()
+            print("yielded:", result)
 
     def add_new_process(self, process: Process):
         new_pid = max(self.process_table.keys()) + 1
