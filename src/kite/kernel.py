@@ -126,6 +126,10 @@ class Kernel:
     def exit_syscall(self, process: Process):
         print(" Process exited!")
         self.scheduler.remove_thread()
+        if process.pid == 1:    # I am init
+            yield "process exited"
+        parent = self.process_table[process.ppid]
+        parent.pending_signals[0] = 1
         yield "process exited"
 
     def get_string_from_memory(self, process: Process, string_pointer: int):
@@ -222,6 +226,7 @@ class Kernel:
             child.fdt[k] = v
 
         child_pid = self.add_new_process(child)
+        child.ppid = process.pid
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child.cpu_context.regs.write(REG_RET_VAL1, 0)
         child_thread = self.thread(child_pid)
@@ -237,6 +242,22 @@ class Kernel:
         new_context = parse_cpu_context_from_file(path)
         process.cpu_context = new_context
 
+    def debug_print(self, process: Process):
+        value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        print(hex(value))
+        # process.cpu_context.vm.dump_mem(ptr, 1)
+
+    def wait_syscall(self, process: Process):
+        print(" wait invoked!")
+        while True:
+            if process.pending_signals[0] == 1:
+                print(" My child terminated!")
+                process.pending_signals[0] == 0
+                return
+            else:
+                yield "blocked"
+
+
 syscall_dict = {
                 0:  Kernel.read_syscall,
                 1:  Kernel.write_syscall,
@@ -244,5 +265,7 @@ syscall_dict = {
                 22: Kernel.pipe_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
-                60: Kernel.exit_syscall
+                60: Kernel.exit_syscall,
+                100: Kernel.debug_print,
+                247: Kernel.wait_syscall
                 }
