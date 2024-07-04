@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import Process, ProcessTable
+from kite.process import Process, ProcessTable, Pipe
 from kite.scheduler import Scheduler
 from kite.simulator import Simulator
 
@@ -8,6 +8,7 @@ from kite.loading import check_elf, parse_cpu_context_from_file
 
 from pathlib import Path
 import inspect
+import os
 from copy import deepcopy, copy
 
 from pyrisc.sim.sim import Event, MemEvent
@@ -147,6 +148,18 @@ class Kernel:
         print(" read invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         f = process.fdt[fd]
+        if isinstance(f, Pipe):
+            bytes_to_read = 5
+            while bytes_to_read > 0:
+                print(bytes_to_read)
+                bytes_read = f.read(bytes_to_read)
+                if bytes_read == []:
+                    print("     read blocked! What should happen now?")
+                    yield "blocked"
+                print(bytes_read)
+                bytes_to_read -= len(bytes_read)
+            return
+
         position = 0
         f.seek(position)
         bytes_to_read = 5
@@ -172,12 +185,28 @@ class Kernel:
         f.write("written\n")
         f.flush()
 
+    def pipe_syscall(self, process: Process):
+        print(" pipe invoked")
+        fds_p = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        print(hex(fds_p))
+        read_fd = max(process.fdt.keys()) + 1
+        write_fd = max(process.fdt.keys()) + 2
+        # r, w = os.pipe()
+        pipe = Pipe()
+        process.fdt[read_fd] = pipe
+        process.fdt[write_fd] = pipe
+        print(process.fdt)
+        print(read_fd, write_fd)
+        process.cpu_context.vm.copy_into_vm(fds_p, read_fd)
+        process.cpu_context.vm.copy_into_vm(fds_p + 4, write_fd)
+
     def fork_syscall(self, process: Process):
         print(" fork invoked!")
         child_cpu_context = deepcopy(process.cpu_context)
         child = Process(child_cpu_context)
         child_pid = self.add_new_process(child)
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
+        child.cpu_context.regs.write(REG_RET_VAL1, 0)
         child_thread = self.thread(child_pid)
         self.scheduler.enqueue_thread(child_thread)
 
@@ -195,6 +224,7 @@ syscall_dict = {
                 0:  Kernel.read_syscall,
                 1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
+                22: Kernel.pipe_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall
