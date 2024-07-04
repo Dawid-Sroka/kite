@@ -66,6 +66,7 @@ class Kernel:
         # event loop
         while True:
             print("PID =", pid)
+            # process.cpu_context.vm.dump_mem(0x8001ffe0, 8)
             self.simulator.load_context_into_cpu(process.cpu_context)
             cpu_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()

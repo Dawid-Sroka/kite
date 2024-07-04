@@ -104,6 +104,28 @@ class VMAreas(TranslatesAddresses):
             print("SIGSEGV")
             raise NotImplementedError
 
+    def dump_mem(self, pointer: int, count):
+
+        def transparent_get_byte(pointer):
+            vpn = pointer >> VPO_LENTGH
+            vpo = (pointer & VPO_MASK) // WORD_SIZE
+            pte = self.translate(vpn)
+            if pte == None:
+                return 0
+            if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
+                page = pte.physical_page
+                ppo = vpo
+                mem_word = page[ppo]
+                offset = pointer % 4
+                mem_byte = (mem_word >> offset * 8) & 0xFF
+                return mem_byte
+            else:
+                return 0
+
+        for i in range(count):
+            print(f"{hex(pointer)} {hex(transparent_get_byte(pointer))}")
+            pointer += 4
+
 
 class CPUContext:
     def __init__(self, pc: Register, regs: RegisterFile, vm_areas: VMAreas):
