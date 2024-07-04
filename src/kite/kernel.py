@@ -216,6 +216,10 @@ class Kernel:
         print(" fork invoked!")
         child_cpu_context = deepcopy(process.cpu_context)
         child = Process(child_cpu_context)
+        # child = deepcopy(process)
+        for k,v in process.fdt.items():
+            child.fdt[k] = v
+
         child_pid = self.add_new_process(child)
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child.cpu_context.regs.write(REG_RET_VAL1, 0)
