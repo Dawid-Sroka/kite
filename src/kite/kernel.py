@@ -151,6 +151,7 @@ class Kernel:
         if isinstance(f, Pipe):
             bytes_to_read = 5
             while bytes_to_read > 0:
+                print("pipe buf: ", f.buffer)
                 print(bytes_to_read)
                 bytes_read = f.read(bytes_to_read)
                 if bytes_read == []:
@@ -178,8 +179,15 @@ class Kernel:
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
-        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        # fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        fd = 3
+        print("fd =", hex(fd))
         f = process.fdt[fd]
+        if isinstance(f, Pipe):
+            f.write("Hello from")
+            print("pipe buf: ", f.buffer)
+            return
+
         position = 0
         f.seek(position)
         f.write("written\n")
@@ -196,7 +204,6 @@ class Kernel:
         process.fdt[read_fd] = pipe
         process.fdt[write_fd] = pipe
         print(process.fdt)
-        print(read_fd, write_fd)
         process.cpu_context.vm.copy_into_vm(fds_p, read_fd)
         process.cpu_context.vm.copy_into_vm(fds_p + 4, write_fd)
 
