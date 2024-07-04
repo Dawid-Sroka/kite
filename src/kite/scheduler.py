@@ -15,6 +15,8 @@ class Scheduler:
         if len(self.ready_queue) == 0:
             return None
         else:
+            first_thread = self.ready_queue.pop(0)
+            self.ready_queue.append(first_thread)
             thread = self.ready_queue[0]
             return thread
 
