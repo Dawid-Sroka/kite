@@ -1,6 +1,6 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import Process, ProcessTable, Pipe
-from kite.scheduler import Scheduler
+from kite.process import Process, ProcessTable, OpenFileObject, Pipe
+from kite.scheduler import Scheduler, Resource
 from kite.simulator import Simulator
 
 from kite.consts import *
@@ -20,7 +20,7 @@ class Kernel:
         self.simulator = simulator
         self.process_table = {}
         self.scheduler = scheduler
-        #self.vfs
+        self.open_files_table = {}
 
     @classmethod
     def create(cls):
@@ -34,24 +34,22 @@ class Kernel:
         init.pid = 1
         self.process_table[1] = init
         init_thread = self.thread(1)
-        self.scheduler.enqueue_thread(init_thread)
+        self.scheduler.enqueue_thread((init.pid, init_thread))
 
         while True:
-            sleep(1)
-            thread = self.scheduler.get_thread()
+            # sleep(1)
+            thread_object = self.scheduler.get_thread()
             print("ready", self.scheduler.ready_queue)
             print("blocked", self.scheduler.blocked_queue)
-            if thread is None:
-                if len(self.scheduler.blocked_queue) > 0:
-                    thread = self.scheduler.blocked_queue[0]
-                    self.scheduler.move_to_ready(thread)
-                else:
-                    print("No more processes!")
-                    break
+            if thread_object is None:
+                ## ultimately if there is noone ready, kernel should exit
+                print("No more processes!")
+                break
 
+            pid, thread = thread_object
+            # check pending signals mask
             result = next(thread)
-            if result == "blocked":
-                self.scheduler.move_to_blocked(thread)
+            self.scheduler.update_processes_states(pid, thread, result)
             # self.scheduler.shift_queue()
             print("yielded:", result)
 
@@ -70,21 +68,23 @@ class Kernel:
             self.simulator.load_context_into_cpu(process.cpu_context)
             cpu_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
-            yield from self.react_to_event(process, cpu_event)
+            result = yield from self.react_to_event(process, cpu_event)
+            self.scheduler.update_processes_states(pid, self, result)
+            print("result", result)
 
     def load_process_from_file(self, program_file: str) -> Process:
         cpu_context = parse_cpu_context_from_file(program_file)
         process = Process(cpu_context)
-        # self.process_table.add(process) # nadać pid
         return process
 
     def react_to_event(self, process: Process, event: Event) -> None:
         # event, addr = cpu_event
         event_t = event.type
         print("event: " + EXC_MSG[event_t])
+        result = None
         # Add Interrupt Descriptor Table??
         if event_t == EXC_ECALL:
-            yield from self.call_syscall(process)
+            result = yield from self.call_syscall(process)
         elif event_t == EXC_CLOCK:
             # check whether time quantum elapsed
             # some action of scheduler
@@ -109,7 +109,7 @@ class Kernel:
         else:
             raise NotImplementedError
             # break
-        return 0
+        return result
 
 # --------------------------------------------------------------------------
 #   syscall implementations
@@ -127,10 +127,11 @@ class Kernel:
         print(" Process exited!")
         self.scheduler.remove_thread()
         if process.pid == 1:    # I am init
-            yield "process exited"
+            yield ("unblock", process.pid)
         parent = self.process_table[process.ppid]
         parent.pending_signals[0] = 1
-        yield "process exited"
+        # self.scheduler.notify_all_waiting_for_event()
+        yield ("unblock", process.pid)
 
     def get_string_from_memory(self, process: Process, string_pointer: int):
         d = ""
@@ -147,17 +148,24 @@ class Kernel:
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
         print(" open file_name:", file_name)
-        path = Path(__file__).parents[2] / "binaries" / file_name
-        f = open(path, 'a+')
         fd = max(process.fdt.keys()) + 1
-        process.fdt[fd] = f
+        if file_name in self.open_files_table.keys():
+            process.fdt[fd] = self.open_files_table[file_name]
+            self.open_files_table[file_name].ref_cnt += 1
+        else:
+            path = Path(__file__).parents[2] / "binaries" / file_name
+            f = open(path, 'a+')
+            ofo = OpenFileObject(file_name, f)
+            self.open_files_table[file_name] = ofo
+            process.fdt[fd] = ofo
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
         print(process.fdt)
 
     def read_syscall(self, process: Process):
         print(" read invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        f = process.fdt[fd]
+        open_file_object = process.fdt[fd]
+        f = open_file_object.file_struct
         if isinstance(f, Pipe):
             bytes_to_read = 5
             while bytes_to_read > 0:
@@ -166,7 +174,7 @@ class Kernel:
                 bytes_read = f.read(bytes_to_read)
                 if bytes_read == []:
                     print("     read blocked! What should happen now?")
-                    yield "blocked"
+                    yield ("block", Resource("I/O",open_file_object))
                 print(bytes_read)
                 bytes_to_read -= len(bytes_read)
             return
@@ -179,7 +187,7 @@ class Kernel:
             bytes_read = f.read(bytes_to_read)
             if bytes_read == '':
                 print("     read blocked! What should happen now?")
-                yield "blocked"
+                yield ("block", Resource("I/O",open_file_object))
             print(bytes_read)
             bytes_to_read -= len(bytes_read)
             position += len(bytes_read)
@@ -189,10 +197,12 @@ class Kernel:
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
+        # TODO Why this doesn't work?
         # fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         fd = 3
         print("fd =", hex(fd))
-        f = process.fdt[fd]
+        open_file_object = process.fdt[fd]
+        f = open_file_object.file_struct
         if isinstance(f, Pipe):
             f.write("Hello from")
             print("pipe buf: ", f.buffer)
@@ -202,6 +212,7 @@ class Kernel:
         f.seek(position)
         f.write("written\n")
         f.flush()
+        return ("unblock", Resource("I/O", open_file_object))
 
     def pipe_syscall(self, process: Process):
         print(" pipe invoked")
@@ -230,7 +241,7 @@ class Kernel:
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child.cpu_context.regs.write(REG_RET_VAL1, 0)
         child_thread = self.thread(child_pid)
-        self.scheduler.enqueue_thread(child_thread)
+        self.scheduler.enqueue_thread((child_pid, child_thread))
 
 
     def execve_syscall(self, process: Process):

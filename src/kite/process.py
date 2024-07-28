@@ -6,7 +6,9 @@ class Process:
         self.cpu_context = cpu_context
         self.pid = -1
         self.ppid = -1
-        self.fdt = {0: stdin, 1: stdout, 2: stderr}
+        self.fdt = {0: OpenFileObject("stdin", stdin),
+                    1: OpenFileObject("stdout", stdout),
+                    2: OpenFileObject("stderr", stderr)}
         self.pending_signals = [0]
 
 class ProcessTable:
@@ -17,6 +19,12 @@ class ProcessTable:
     def add(self, process: Process):
         new_pid =  self.max_pid + 1
         self.table[new_pid] = process
+
+class OpenFileObject:
+    def __init__(self, file_name, file_struct):
+        self.file_name = file_name
+        self.file_struct = file_struct
+        self.ref_cnt = 1
 
 class Pipe:
     def __init__(self):
