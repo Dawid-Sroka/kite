@@ -1,11 +1,8 @@
 from kite.job_queue import JobQueue
-from kite.process import Process
+from kite.process import Process, Resource
 
 
-class Resource:
-    def __init__(self, resource_type, resource):
-        self.resource_type = resource_type
-        self.resource = resource
+
 
 class Scheduler:
     def __init__(self):

@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import Process, ProcessTable, OpenFileObject, Pipe
+from kite.process import Process, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, Pipe
 from kite.scheduler import Scheduler, Resource
 from kite.simulator import Simulator
 
@@ -155,7 +155,7 @@ class Kernel:
         else:
             path = Path(__file__).parents[2] / "binaries" / file_name
             f = open(path, 'a+')
-            ofo = OpenFileObject(file_name, f)
+            ofo = RegularFile(file_name, f)
             self.open_files_table[file_name] = ofo
             process.fdt[fd] = ofo
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
@@ -179,20 +179,21 @@ class Kernel:
                 bytes_to_read -= len(bytes_read)
             return
 
-        position = 0
-        f.seek(position)
-        bytes_to_read = 5
-        while bytes_to_read > 0:
-            print(bytes_to_read)
-            bytes_read = f.read(bytes_to_read)
-            if bytes_read == '':
-                print("     read blocked! What should happen now?")
-                yield ("block", Resource("I/O",open_file_object))
-            print(bytes_read)
-            bytes_to_read -= len(bytes_read)
-            position += len(bytes_read)
-            f.seek(position)
-        return
+        yield from open_file_object.read(5)
+        # position = 0
+        # f.seek(position)
+        # bytes_to_read = 5
+        # while bytes_to_read > 0:
+        #     print(bytes_to_read)
+        #     bytes_read = f.read(bytes_to_read)
+        #     if bytes_read == '':
+        #         print("     read blocked! What should happen now?")
+        #         yield ("block", Resource("I/O",open_file_object))
+        #     print(bytes_read)
+        #     bytes_to_read -= len(bytes_read)
+        #     position += len(bytes_read)
+        #     f.seek(position)
+        # return
 
 
     def write_syscall(self, process: Process):
@@ -208,10 +209,11 @@ class Kernel:
             print("pipe buf: ", f.buffer)
             return
 
-        position = 0
-        f.seek(position)
-        f.write("written\n")
-        f.flush()
+        open_file_object.file_struct.write("written\n")
+        # position = 0
+        # f.seek(position)
+        # f.write("written\n")
+        # f.flush()
         return ("unblock", Resource("I/O", open_file_object))
 
     def pipe_syscall(self, process: Process):
@@ -220,10 +222,18 @@ class Kernel:
         print(hex(fds_p))
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
-        # r, w = os.pipe()
-        pipe = Pipe()
-        process.fdt[read_fd] = pipe
-        process.fdt[write_fd] = pipe
+
+        buffer = PipeBuffer(10)
+        read_ofo = Pipe("pipe_" + str(process.pid) + "_rd", buffer, "rd")
+        write_ofo = Pipe("pipe_" + str(process.pid) + "_wr", buffer, "wr")
+        self.open_files_table["pipe_" + str(process.pid) + "_rd"] = read_ofo
+        self.open_files_table["pipe_" + str(process.pid) + "_wr"] = write_ofo
+        process.fdt[read_fd] = read_ofo
+        process.fdt[write_fd] = write_ofo
+
+        # pipe = Pipe()
+        # process.fdt[read_fd] = pipe
+        # process.fdt[write_fd] = pipe
         print(process.fdt)
         process.cpu_context.vm.copy_into_vm(fds_p, read_fd)
         process.cpu_context.vm.copy_into_vm(fds_p + 4, write_fd)
