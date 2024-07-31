@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import Process, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, Pipe
+from kite.process import Process, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulator import Simulator
 
@@ -165,76 +165,34 @@ class Kernel:
         print(" read invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         open_file_object = process.fdt[fd]
-        f = open_file_object.file_struct
-        if isinstance(f, Pipe):
-            bytes_to_read = 5
-            while bytes_to_read > 0:
-                print("pipe buf: ", f.buffer)
-                print(bytes_to_read)
-                bytes_read = f.read(bytes_to_read)
-                if bytes_read == []:
-                    print("     read blocked! What should happen now?")
-                    yield ("block", Resource("I/O",open_file_object))
-                print(bytes_read)
-                bytes_to_read -= len(bytes_read)
-            return
-
+        f = open_file_object
         yield from open_file_object.read(5)
-        # position = 0
-        # f.seek(position)
-        # bytes_to_read = 5
-        # while bytes_to_read > 0:
-        #     print(bytes_to_read)
-        #     bytes_read = f.read(bytes_to_read)
-        #     if bytes_read == '':
-        #         print("     read blocked! What should happen now?")
-        #         yield ("block", Resource("I/O",open_file_object))
-        #     print(bytes_read)
-        #     bytes_to_read -= len(bytes_read)
-        #     position += len(bytes_read)
-        #     f.seek(position)
-        # return
 
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
-        # TODO Why this doesn't work?
-        # fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        fd = 3
-        print("fd =", hex(fd))
+        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         open_file_object = process.fdt[fd]
         f = open_file_object.file_struct
-        if isinstance(f, Pipe):
-            f.write("Hello from")
-            print("pipe buf: ", f.buffer)
-            return
+        return open_file_object.write("written\n")
 
-        open_file_object.file_struct.write("written\n")
-        # position = 0
-        # f.seek(position)
-        # f.write("written\n")
-        # f.flush()
-        return ("unblock", Resource("I/O", open_file_object))
 
     def pipe_syscall(self, process: Process):
         print(" pipe invoked")
         fds_p = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        print(hex(fds_p))
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
 
         buffer = PipeBuffer(10)
-        read_ofo = Pipe("pipe_" + str(process.pid) + "_rd", buffer, "rd")
-        write_ofo = Pipe("pipe_" + str(process.pid) + "_wr", buffer, "wr")
+        read_ofo = PipeReadEnd("pipe_" + str(process.pid) + "_rd", buffer)
+        write_ofo = PipeWriteEnd("pipe_" + str(process.pid) + "_wr", buffer)
+        read_ofo.write_end_ptr = write_ofo
+        write_ofo.read_end_ptr = read_ofo
         self.open_files_table["pipe_" + str(process.pid) + "_rd"] = read_ofo
         self.open_files_table["pipe_" + str(process.pid) + "_wr"] = write_ofo
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
 
-        # pipe = Pipe()
-        # process.fdt[read_fd] = pipe
-        # process.fdt[write_fd] = pipe
-        print(process.fdt)
         process.cpu_context.vm.copy_into_vm(fds_p, read_fd)
         process.cpu_context.vm.copy_into_vm(fds_p + 4, write_fd)
 
