@@ -49,9 +49,9 @@ class Kernel:
             pid, thread = thread_object
             # check pending signals mask
             result = next(thread)
+            print("yielded:", result[0], result[1].resource)
             self.scheduler.update_processes_states(pid, thread, result)
             # self.scheduler.shift_queue()
-            print("yielded:", result)
 
     def add_new_process(self, process: Process):
         new_pid = max(self.process_table.keys()) + 1
@@ -127,11 +127,11 @@ class Kernel:
         print(" Process exited!")
         self.scheduler.remove_thread()
         if process.pid == 1:    # I am init
-            yield ("unblock", process.pid)
+            yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
         parent.pending_signals[0] = 1
         # self.scheduler.notify_all_waiting_for_event()
-        yield ("unblock", process.pid)
+        yield ("unblock", Resource("child state" , process.pid))
 
     def get_string_from_memory(self, process: Process, string_pointer: int):
         d = ""
