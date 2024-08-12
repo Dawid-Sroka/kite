@@ -44,22 +44,14 @@ class RegularFile(OpenFileObject):
     def __init__(self, file_name, file_struct):
         super().__init__(file_name, file_struct)
         self.ref_cnt = 1
+        self.position = 0
 
     def read(self, bytes_to_read):
-        position = 0
         f = self.file_struct
-        f.seek(position)
-        while bytes_to_read > 0:
-            print(bytes_to_read)
-            bytes_read = f.read(bytes_to_read)
-            if bytes_read == '':
-                print("     read blocked! What should happen now?")
-                yield ("block", Resource("I/O", self))
-            print(bytes_read)
-            bytes_to_read -= len(bytes_read)
-            position += len(bytes_read)
-            f.seek(position)
-        return
+        f.seek(self.position)
+        bytes_read = f.read(bytes_to_read)
+        self.position += len(bytes_read)
+        return bytes_read
 
     def write(self, bytes_to_write):
         position = 0
@@ -104,8 +96,9 @@ class PipeReadEnd(OpenFileObject):
             if bytes_read == []:
                 print("     read blocked! What should happen now?")
                 yield ("block", Resource("I/O", self.write_end_ptr))
-            print(bytes_read)
+            print("pipe bytes_read", bytes_read)
             n_left -= chunk_len
+        print("pipe read is gonna return")
         return array_of_returned_bytes
 
 class PipeWriteEnd(OpenFileObject):
