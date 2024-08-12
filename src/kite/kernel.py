@@ -180,7 +180,7 @@ class Kernel:
 
     def pipe_syscall(self, process: Process):
         print(" pipe invoked")
-        fds_p = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        fds_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
 
@@ -194,8 +194,8 @@ class Kernel:
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
 
-        process.cpu_context.vm.copy_into_vm(fds_p, read_fd)
-        process.cpu_context.vm.copy_into_vm(fds_p + 4, write_fd)
+        process.cpu_context.vm.copy_into_vm(fds_ptr, read_fd)
+        process.cpu_context.vm.copy_into_vm(fds_ptr + 4, write_fd)
 
     def fork_syscall(self, process: Process):
         print(" fork invoked!")
