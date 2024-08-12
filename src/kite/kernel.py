@@ -166,8 +166,14 @@ class Kernel:
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
         count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
+
         open_file_object = process.fdt[fd]
-        yield from open_file_object.read(count)
+        read_method = open_file_object.read
+        if inspect.isgeneratorfunction(read_method):
+            yield from read_method(count)
+        else:
+            bytes_read = read_method(count)
+
 
 
     def write_syscall(self, process: Process):
