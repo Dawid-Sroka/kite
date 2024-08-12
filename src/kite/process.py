@@ -49,8 +49,9 @@ class RegularFile(OpenFileObject):
     def read(self, bytes_to_read):
         f = self.file_struct
         f.seek(self.position)
-        bytes_read = f.read(bytes_to_read)
-        self.position += len(bytes_read)
+        chars_read = f.read(bytes_to_read)
+        self.position += len(chars_read)
+        bytes_read = [ord(b) for b in chars_read]
         return bytes_read
 
     def write(self, bytes_to_write):
