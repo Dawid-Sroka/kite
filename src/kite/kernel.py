@@ -164,9 +164,10 @@ class Kernel:
     def read_syscall(self, process: Process):
         print(" read invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
+        count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
         open_file_object = process.fdt[fd]
-        f = open_file_object
-        yield from open_file_object.read(5)
+        yield from open_file_object.read(count)
 
 
     def write_syscall(self, process: Process):
