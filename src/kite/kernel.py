@@ -66,9 +66,9 @@ class Kernel:
             print("PID =", pid)
             # process.cpu_context.vm.dump_mem(0x8001ffe0, 8)
             self.simulator.load_context_into_cpu(process.cpu_context)
-            cpu_event = self.simulator.run()
+            hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
-            result = yield from self.react_to_event(process, cpu_event)
+            result = yield from self.react_to_event(process, hardware_event)
             self.scheduler.update_processes_states(pid, self, result)
             print("result", result)
 
@@ -201,7 +201,7 @@ class Kernel:
         process.fdt[write_fd] = write_ofo
 
         process.cpu_context.vm.copy_into_vm(fds_ptr, read_fd)
-        process.cpu_context.vm.copy_into_vm(fds_ptr + 4, write_fd)
+        process.cpu_context.vm.copy_into_vm(fds_ptr + WORD_SIZE, write_fd)
 
     def fork_syscall(self, process: Process):
         print(" fork invoked!")
