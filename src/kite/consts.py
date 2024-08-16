@@ -53,6 +53,7 @@ REG_RET_VAL2            = 11
 WORD                = np.uint32
 SWORD               = np.int32
 
+INT_SIZE = 4
 
 #--------------------------------------------------------------------------
 #   RISC-V constants
