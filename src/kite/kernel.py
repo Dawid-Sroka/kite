@@ -228,9 +228,10 @@ class Kernel:
         child = Process(child_cpu_context)
         # child = deepcopy(process)
         child.copy_fdt(process)
-
         child_pid = self.add_new_process(child)
         child.ppid = process.pid
+        process.children.append(child)
+
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child.cpu_context.regs.write(REG_RET_VAL1, 0)
         child_thread = self.thread(child_pid)
@@ -257,7 +258,7 @@ class Kernel:
                 process.pending_signals[0] == 0
                 return
             else:
-                yield "blocked"
+                yield ("block", Resource("child state", [child.pid for child in process.children]))
 
 
 syscall_dict = {

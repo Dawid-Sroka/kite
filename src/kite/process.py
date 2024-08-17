@@ -7,6 +7,7 @@ class Process:
         self.cpu_context = cpu_context
         self.pid = -1
         self.ppid = -1
+        self.children = []
         self.fdt = {0: OpenFileObject("stdin", stdin),
                     1: OpenFileObject("stdout", stdout),
                     2: OpenFileObject("stderr", stderr)}
@@ -29,9 +30,9 @@ class ProcessTable:
 
 
 class Resource:
-    def __init__(self, resource_type, resource):
+    def __init__(self, resource_type, resources_set):
         self.resource_type = resource_type
-        self.resource = resource
+        self.resource = resources_set
 
 
 class OpenFileObject(ABC):
@@ -101,7 +102,7 @@ class PipeReadEnd(OpenFileObject):
 
         while pipe_buffer.unread_count == 0:
             print(" # " + "       read blocked! What should happen now?")
-            yield ("block", Resource("I/O", self.write_end_ptr))
+            yield ("block", Resource("I/O", [self.write_end_ptr]))
 
         chars_read = []
         no_bytes_to_read = min(no_bytes_to_read, pipe_buffer.unread_count)
@@ -129,7 +130,7 @@ class PipeWriteEnd(OpenFileObject):
 
         while pipe_buffer.unread_count == pipe_buffer.buffer_size:
             print(" # " + "       write blocked!")
-            yield ("block", Resource("I/O", self.read_end_ptr))
+            yield ("block", Resource("I/O", [self.read_end_ptr]))
 
         no_bytes_to_write = min(pipe_buffer.buffer_size - pipe_buffer.unread_count, len(array_of_bytes_to_write))
         for i in range(no_bytes_to_write):

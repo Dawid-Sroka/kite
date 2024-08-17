@@ -36,7 +36,8 @@ class Scheduler:
             for index, blocked_thread in enumerate(self.blocked_queue):
                 blocked_pid, blocked_thread, blocking_resource = blocked_thread
                 if blocking_resource.resource_type == resource.resource_type and \
-                    blocking_resource.resource == resource.resource:
+                    resource.resource in blocking_resource.resource:
+                    # blocking_resource.resource == resource.resource:
                     self.blocked_queue.pop(index)
                     self.ready_queue.append((blocked_pid, blocked_thread))
         if action == "block":
