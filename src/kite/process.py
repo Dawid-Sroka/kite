@@ -33,11 +33,20 @@ class OpenFileObject(ABC):
         self.file_struct = file_struct
         self.file_name = file_name
 
-    def read(self, bytes_to_read):
-        return self.file_struct.read(bytes_to_read)
+    def read(self, no_bytes_to_read):
+        f = self.file_struct
+        chars_read = f.read(no_bytes_to_read)
+        array_of_bytes_read = [ord(c) for c in chars_read]
+        return (array_of_bytes_read, None)
 
-    def write(self, bytes_to_read):
-        return self.file_struct.read(bytes_to_read)
+    def write(self, array_of_bytes_to_write):
+        f = self.file_struct
+        string_to_write = ""
+        for i in range(len(array_of_bytes_to_write)):
+            string_to_write += chr(array_of_bytes_to_write[i])
+        no_bytes_written = self.file_struct.write(string_to_write)
+        f.flush()
+        return (no_bytes_written, None)
 
 
 class RegularFile(OpenFileObject):
@@ -46,21 +55,24 @@ class RegularFile(OpenFileObject):
         self.ref_cnt = 1
         self.position = 0
 
-    def read(self, bytes_to_read):
+    def read(self, no_bytes_to_read):
         f = self.file_struct
         f.seek(self.position)
-        chars_read = f.read(bytes_to_read)
+        chars_read = f.read(no_bytes_to_read)
         self.position += len(chars_read)
-        bytes_read = [ord(b) for b in chars_read]
-        return bytes_read
+        array_of_bytes_read = [ord(b) for b in chars_read]
+        return (array_of_bytes_read, None)
 
-    def write(self, bytes_to_write):
+    def write(self, array_of_bytes_to_write):
         position = 0
         f = self.file_struct
         f.seek(position)
-        f.write("written\n")
+        string_to_write = ""
+        for i in range(len(array_of_bytes_to_write)):
+            string_to_write += chr(array_of_bytes_to_write[i])
+        no_bytes_written = self.file_struct.write(string_to_write)
         f.flush()
-
+        return (no_bytes_written, None)
 
 class PipeBuffer():
     def __init__(self, buffer_size):
@@ -77,7 +89,7 @@ class PipeReadEnd(OpenFileObject):
         self.referenced_by = []
         self.write_end_ptr = None
 
-    def read(self, n_to_read):
+    def read(self, no_bytes_to_read):
         pipe_buffer = self.file_struct
         print("pipe buf: ", self.file_struct.buffer)
 
@@ -86,7 +98,7 @@ class PipeReadEnd(OpenFileObject):
             yield ("block", Resource("I/O", self.write_end_ptr))
 
         chars_read = []
-        no_bytes_to_read = min(n_to_read, pipe_buffer.unread_count)
+        no_bytes_to_read = min(no_bytes_to_read, pipe_buffer.unread_count)
         for _ in range(no_bytes_to_read):
             read_char = pipe_buffer.buffer[pipe_buffer.read_position]
             pipe_buffer.buffer[pipe_buffer.read_position] = None
@@ -96,8 +108,8 @@ class PipeReadEnd(OpenFileObject):
 
         print("pipe bytes_read", chars_read)
         print("pipe read is gonna return")
-        bytes_read = [ord(b) for b in chars_read]
-        return bytes_read
+        bytes_read = chars_read
+        return (bytes_read, ("unblock", Resource("I/O", self)))
 
 class PipeWriteEnd(OpenFileObject):
     def __init__(self, file_name, file_struct):
@@ -106,10 +118,16 @@ class PipeWriteEnd(OpenFileObject):
         self.referenced_by = []
         self.read_end_ptr = None
 
-    def write(self, bytes_to_write):
+    def write(self, array_of_bytes_to_write):
         pipe_buffer = self.file_struct
-        for i in range(min(pipe_buffer.buffer_size - pipe_buffer.unread_count, len(bytes_to_write))):
-            pipe_buffer.buffer[pipe_buffer.write_position] = bytes_to_write[i]
+
+        while pipe_buffer.unread_count == pipe_buffer.buffer_size:
+            print("     write blocked!")
+            yield ("block", Resource("I/O", self.read_end_ptr))
+
+        no_bytes_to_write = min(pipe_buffer.buffer_size - pipe_buffer.unread_count, len(array_of_bytes_to_write))
+        for i in range(no_bytes_to_write):
+            pipe_buffer.buffer[pipe_buffer.write_position] = array_of_bytes_to_write[i]
             pipe_buffer.write_position = (pipe_buffer.write_position + 1) % pipe_buffer.buffer_size
             pipe_buffer.unread_count += 1
-        return ("unblock", Resource("I/O", self))
+        return (no_bytes_to_write, ("unblock", Resource("I/O", self)))
