@@ -11,7 +11,8 @@ int main() {
     write(pipefd[1]);
 
   } else {        // parent
-    read(pipefd[0]);
+    char buf[10];
+    read(pipefd[0], buf, 5);
   }
   _exit();
 }
