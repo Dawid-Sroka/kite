@@ -119,9 +119,10 @@ class Kernel:
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         print(" syscall number = " + str(syscall_no))
         if inspect.isgeneratorfunction(syscall_dict[syscall_no]):
-            yield from syscall_dict[syscall_no](self, process)
+            result = yield from syscall_dict[syscall_no](self, process)
         else:
-            return syscall_dict[syscall_no](self, process)
+            result = syscall_dict[syscall_no](self, process)
+        return result
 
     def exit_syscall(self, process: Process):
         print(" Process exited!")
@@ -170,19 +171,36 @@ class Kernel:
         open_file_object = process.fdt[fd]
         read_method = open_file_object.read
         if inspect.isgeneratorfunction(read_method):
-            bytes_read = yield from read_method(count)
+            read_result = yield from read_method(count)
         else:
-            bytes_read = read_method(count)
+            read_result = read_method(count)
 
-        process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, bytes_read)
+        array_of_bytes_read, result = read_result
+        process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, array_of_bytes_read)
+        bytes_read = len(array_of_bytes_read)
+        process.cpu_context.regs.write(REG_RET_VAL1, bytes_read)
+
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
+        count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
+
         open_file_object = process.fdt[fd]
         f = open_file_object.file_struct
-        return open_file_object.write("written\n")
+        array_of_bytes_to_write = process.cpu_context.vm.load_bytes_from_vm(buff_ptr, count)
 
+        write_method = open_file_object.write
+        if inspect.isgeneratorfunction(write_method):
+            write_result = yield from write_method(array_of_bytes_to_write)
+        else:
+            write_result = write_method(array_of_bytes_to_write)
+
+        no_bytes_written, result = write_result
+        process.cpu_context.regs.write(REG_RET_VAL1, no_bytes_written)
+        process.cpu_context.vm.dump_mem_in_bytes(buff_ptr, 8)
+        return result
 
     def pipe_syscall(self, process: Process):
         print(" pipe invoked")
