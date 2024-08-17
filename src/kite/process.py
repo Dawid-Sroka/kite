@@ -78,29 +78,26 @@ class PipeReadEnd(OpenFileObject):
         self.write_end_ptr = None
 
     def read(self, n_to_read):
-        array_of_returned_bytes = []
-        n_left = n_to_read
         pipe_buffer = self.file_struct
-        while n_left > 0:
-            print("pipe buf: ", self.file_struct)
-            print(n_left)
+        print("pipe buf: ", self.file_struct.buffer)
 
-            bytes_read = []
-            chunk_len = min(n_left, pipe_buffer.unread_count)
-            for _ in range(chunk_len):
-                bytes_read.append(pipe_buffer.buffer[pipe_buffer.read_position])
-                pipe_buffer.buffer[pipe_buffer.read_position] = None
-                pipe_buffer.read_position = (pipe_buffer.read_position + 1) % pipe_buffer.buffer_size
-                pipe_buffer.unread_count -= 1
-            array_of_returned_bytes += bytes_read
+        while pipe_buffer.unread_count == 0:
+            print("     read blocked! What should happen now?")
+            yield ("block", Resource("I/O", self.write_end_ptr))
 
-            if bytes_read == []:
-                print("     read blocked! What should happen now?")
-                yield ("block", Resource("I/O", self.write_end_ptr))
-            print("pipe bytes_read", bytes_read)
-            n_left -= chunk_len
+        chars_read = []
+        no_bytes_to_read = min(n_to_read, pipe_buffer.unread_count)
+        for _ in range(no_bytes_to_read):
+            read_char = pipe_buffer.buffer[pipe_buffer.read_position]
+            pipe_buffer.buffer[pipe_buffer.read_position] = None
+            pipe_buffer.read_position = (pipe_buffer.read_position + 1) % pipe_buffer.buffer_size
+            pipe_buffer.unread_count -= 1
+            chars_read.append(read_char)
+
+        print("pipe bytes_read", chars_read)
         print("pipe read is gonna return")
-        return array_of_returned_bytes
+        bytes_read = [ord(b) for b in chars_read]
+        return bytes_read
 
 class PipeWriteEnd(OpenFileObject):
     def __init__(self, file_name, file_struct):
