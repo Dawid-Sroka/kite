@@ -8,11 +8,11 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
     vm_areas_list = [VMAreaStruct(0x80000000, 0x00010000, M_READ_ONLY, 0),
                      VMAreaStruct(0x80010000, 0x00010000, M_READ_WRITE, 0)]
     cpu_context.vm.vm_areas_list = vm_areas_list
-    print("Loading file %s" % program_file)
+    print("# " + "Loading file %s" % program_file)
     try:
         f = open(program_file, 'rb')
     except IOError:
-        print(ELF_ERR_MSG[ELF_ERR_OPEN] % program_file)
+        print("# " + ELF_ERR_MSG[ELF_ERR_OPEN] % program_file)
         return WORD(0)
 
     with f:
@@ -20,7 +20,7 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
         efh = ef.header
         ret = check_elf(program_file, efh)
         if ret != ELF_OK:
-            print(ELF_ERR_MSG[ret] % program_file)
+            print("# " + ELF_ERR_MSG[ret] % program_file)
             return WORD(0)
 
         entry_point = WORD(efh['e_entry'])
@@ -36,7 +36,7 @@ def parse_cpu_context_from_file(program_file: str) -> CPUContext | WORD:
             # elif addr >= cpu_context.dmem.mem_start and addr + memsz < cpu_context.dmem.mem_end:
             #     mem = cpu_context.dmem
             # else:
-            #     print("Invalid address range: 0x%08x - 0x%08x" \
+            #     print("# " + "Invalid address range: 0x%08x - 0x%08x" \
             #         % (addr, addr + memsz - 1))
             #     continue
             image = seg.data()
@@ -52,7 +52,7 @@ def check_elf(filename, header):
         # This is already checked during ELFFile()
         '''
         if bytes(e_ident['EI_MAG']) != b'\x7fELF':
-            print("File %s is not an ELF file" % filename)
+            print("# " + "File %s is not an ELF file" % filename)
             return False
         '''
 

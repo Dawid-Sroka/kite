@@ -39,17 +39,18 @@ class Kernel:
         while True:
             # sleep(1)
             thread_object = self.scheduler.get_thread()
-            print("ready", self.scheduler.ready_queue)
-            print("blocked", self.scheduler.blocked_queue)
+            print("######## " + "ready", self.scheduler.dump_ready_queue())
+            print("######## " + "blocked", self.scheduler.dump_blocked_queue())
             if thread_object is None:
                 ## ultimately if there is noone ready, kernel should exit
-                print("No more processes!")
+                print("######## " + "No more processes!")
                 break
 
             pid, thread = thread_object
             # check pending signals mask
+            print("######## " + "scheduling proces with PID", pid)
             result = next(thread)
-            print("yielded:", result[0], result[1].resource)
+            print("######## " + "process", pid, "yielded:", result[0], result[1].resource)
             self.scheduler.update_processes_states(pid, thread, result)
             # self.scheduler.shift_queue()
 
@@ -63,14 +64,20 @@ class Kernel:
         process = self.process_table[pid]
         # event loop
         while True:
-            print("PID =", pid)
+            # print("### " + "PID =", pid)
             # process.cpu_context.vm.dump_mem(0x8001ffe0, 8)
             self.simulator.load_context_into_cpu(process.cpu_context)
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
             result = yield from self.react_to_event(process, hardware_event)
             self.scheduler.update_processes_states(pid, self, result)
-            print("result", result)
+            print("### " + "execution result", self.dump_result(result))
+
+    def dump_result(self, result):
+        if result is None:
+            return "None"
+        action, resource = result
+        return (action, resource.resource)
 
     def load_process_from_file(self, program_file: str) -> Process:
         cpu_context = parse_cpu_context_from_file(program_file)
@@ -80,29 +87,31 @@ class Kernel:
     def react_to_event(self, process: Process, event: Event) -> None:
         # event, addr = cpu_event
         event_t = event.type
-        print("event: " + EXC_MSG[event_t])
+        # print("# " + "event: " + EXC_MSG[event_t])
         result = None
         # Add Interrupt Descriptor Table??
         if event_t == EXC_ECALL:
             result = yield from self.call_syscall(process)
         elif event_t == EXC_CLOCK:
+            print("# " + "event: " + EXC_MSG[event_t])
             # check whether time quantum elapsed
             # some action of scheduler
             yield 0
         # elif event_t == EXC_PAGE_FAULT:
         elif isinstance(event, MemEvent):
+            print("# " + "event: " + EXC_MSG[event_t])
             fault_addr = event.fault_addr
-            print(" fault_addr:", hex(fault_addr))
-            print(" fault_pc:", hex(process.cpu_context.pc.read()))
+            print("# " + "       fault_addr:", hex(fault_addr))
+            print("# " + "       fault_pc:", hex(process.cpu_context.pc.read()))
             if event_t == EXC_PAGE_FAULT_PERMS:
-                print(" SIGSEGV")
+                print("# " + " SIGSEGV")
                 raise NotImplementedError
             elif event_t == EXC_PAGE_FAULT_MISS:
                 area = process.cpu_context.vm.get_area_by_va(fault_addr)
                 if area is not None:
                     process.cpu_context.vm.add_page_containing_addr(fault_addr)
                 else:
-                    print(" SIGSEGV")
+                    print("# " + " SIGSEGV")
                     raise NotImplementedError
             else:
                 raise NotImplementedError
@@ -117,7 +126,8 @@ class Kernel:
 
     def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
-        print(" syscall number = " + str(syscall_no))
+        print("# " + "event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
+        # print("# " + " syscall number = " + str(syscall_no))
         if inspect.isgeneratorfunction(syscall_dict[syscall_no]):
             result = yield from syscall_dict[syscall_no](self, process)
         else:
@@ -125,7 +135,7 @@ class Kernel:
         return result
 
     def exit_syscall(self, process: Process):
-        print(" Process exited!")
+        print("# " + "       Process exited!")
         self.scheduler.remove_thread()
         if process.pid == 1:    # I am init
             yield ("unblock", Resource("child state" , process.pid))
@@ -145,10 +155,9 @@ class Kernel:
         return d
 
     def open_syscall(self, process: Process):
-        print(" open invoked!")
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
-        print(" open file_name:", file_name)
+        print("# " + "       open file_name:", file_name)
         fd = max(process.fdt.keys()) + 1
         if file_name in self.open_files_table.keys():
             process.fdt[fd] = self.open_files_table[file_name]
@@ -160,10 +169,9 @@ class Kernel:
             self.open_files_table[file_name] = ofo
             process.fdt[fd] = ofo
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
-        print(process.fdt)
+        print("#       ", process.fdt)
 
     def read_syscall(self, process: Process):
-        print(" read invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
         count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
@@ -183,7 +191,6 @@ class Kernel:
 
 
     def write_syscall(self, process: Process):
-        print(" write invoked!")
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
         count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
@@ -203,7 +210,6 @@ class Kernel:
         return result
 
     def pipe_syscall(self, process: Process):
-        print(" pipe invoked")
         fds_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
@@ -222,7 +228,6 @@ class Kernel:
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
 
     def fork_syscall(self, process: Process):
-        print(" fork invoked!")
         child_cpu_context = deepcopy(process.cpu_context)
         child = Process(child_cpu_context)
         # child = deepcopy(process)
@@ -238,24 +243,22 @@ class Kernel:
 
 
     def execve_syscall(self, process: Process):
-        print(" execve invoked!")
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
-        print(" execve file_name:", file_name)
+        print("# " + " execve file_name:", file_name)
         path = Path(__file__).parents[2] / "binaries" / file_name
         new_context = parse_cpu_context_from_file(path)
         process.cpu_context = new_context
 
     def debug_print(self, process: Process):
         value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        print(hex(value))
+        print("# " + hex(value))
         # process.cpu_context.vm.dump_mem(ptr, 1)
 
     def wait_syscall(self, process: Process):
-        print(" wait invoked!")
         while True:
             if process.pending_signals[0] == 1:
-                print(" My child terminated!")
+                print("# " + " My child terminated!")
                 process.pending_signals[0] == 0
                 return
             else:

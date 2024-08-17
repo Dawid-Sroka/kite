@@ -42,3 +42,9 @@ class Scheduler:
         if action == "block":
             self.ready_queue.pop(0)
             self.blocked_queue.append((pid, thread, resource))
+
+    def dump_ready_queue(self):
+        return [elem[0] for elem in self.ready_queue]
+
+    def dump_blocked_queue(self):
+        return [(elem[0], elem[2].resource) for elem in self.blocked_queue]

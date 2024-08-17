@@ -91,10 +91,10 @@ class PipeReadEnd(OpenFileObject):
 
     def read(self, no_bytes_to_read):
         pipe_buffer = self.file_struct
-        print("pipe buf: ", self.file_struct.buffer)
+        # print("# " + "pipe buf: ", self.file_struct.buffer)
 
         while pipe_buffer.unread_count == 0:
-            print("     read blocked! What should happen now?")
+            print("# " + "       read blocked! What should happen now?")
             yield ("block", Resource("I/O", self.write_end_ptr))
 
         chars_read = []
@@ -106,8 +106,8 @@ class PipeReadEnd(OpenFileObject):
             pipe_buffer.unread_count -= 1
             chars_read.append(read_char)
 
-        print("pipe bytes_read", chars_read)
-        print("pipe read is gonna return")
+        # print("# " + "pipe bytes_read", chars_read)
+        # print("# " + "pipe read is gonna return")
         bytes_read = chars_read
         return (bytes_read, ("unblock", Resource("I/O", self)))
 
@@ -122,7 +122,7 @@ class PipeWriteEnd(OpenFileObject):
         pipe_buffer = self.file_struct
 
         while pipe_buffer.unread_count == pipe_buffer.buffer_size:
-            print("     write blocked!")
+            print("# " + "       write blocked!")
             yield ("block", Resource("I/O", self.read_end_ptr))
 
         no_bytes_to_write = min(pipe_buffer.buffer_size - pipe_buffer.unread_count, len(array_of_bytes_to_write))
