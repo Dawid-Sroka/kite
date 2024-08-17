@@ -8,7 +8,7 @@ int main() {
   int pid = fork();
 
   if (pid == 0) { // child
-    write(pipefd[1]);
+    write(pipefd[1], "hey", 4);
 
   } else {        // parent
     wait();
