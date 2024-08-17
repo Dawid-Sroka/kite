@@ -45,6 +45,54 @@ class VMAreas(TranslatesAddresses):
         pte = area.get_page(vpn)
         return pte
 
+    def copy_byte_in_vm(self, va, byte_to_store):
+        vpn = va >> VPO_LENTGH
+        VPO_MASK = 2**VPO_LENTGH - 1
+        vpo = (va & VPO_MASK)
+        word_offset_in_page = vpo // WORD_SIZE
+        offset_in_word = vpo % WORD_SIZE
+        word_to_store = byte_to_store << (offset_in_word * 8)
+
+        pte = self.translate(vpn)
+        if pte == None:
+            # there's no such page in pt
+            # kernel must do something
+            raise NotImplementedError
+        page = pte.physical_page
+        saved_word = page[word_offset_in_page]
+        saved_word = saved_word & ((1 << (word_offset_in_page * 8)) - 1)
+        word_to_store += saved_word
+        page[word_offset_in_page] = word_to_store
+
+    def copy_bytes_in_vm(self, start_va, array_of_bytes):
+        count = len(array_of_bytes)
+        for i in range(count):
+            self.copy_byte_in_vm(start_va + i, array_of_bytes[i])
+
+    def load_byte_from_vm(self, va):
+        vpn = va >> VPO_LENTGH
+        VPO_MASK = 2**VPO_LENTGH - 1
+        vpo = (va & VPO_MASK)
+        word_offset_in_page = vpo // WORD_SIZE
+        offset_in_word = vpo % WORD_SIZE
+
+        pte = self.translate(vpn)
+        if pte == None:
+            # there's no such page in pt
+            # kernel must do something
+            raise NotImplementedError
+        page = pte.physical_page
+        loaded_word = page[word_offset_in_page]
+        loaded_byte = (loaded_word >> (offset_in_word * 8)) & 0xFF
+        return loaded_byte
+
+    def load_bytes_from_vm(self, start_va, count):
+        returned_bytes = []
+        for i in range(count):
+            next_byte = self.load_byte_from_vm(start_va + i)
+            returned_bytes.append(next_byte)
+        return returned_bytes
+
     def copy_into_vm(self, va, data):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
@@ -103,6 +151,11 @@ class VMAreas(TranslatesAddresses):
         else:
             print("SIGSEGV")
             raise NotImplementedError
+
+    def dump_mem_in_bytes(self, pointer, count):
+        loaded_bytes = self.load_bytes_from_vm(pointer, count)
+        for i in range(count):
+            print(f"{hex(pointer + i)} {hex(loaded_bytes[i])}")
 
     def dump_mem(self, pointer: int, count):
 
