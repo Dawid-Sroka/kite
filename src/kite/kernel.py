@@ -179,6 +179,7 @@ class Kernel:
         process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, array_of_bytes_read)
         bytes_read = len(array_of_bytes_read)
         process.cpu_context.regs.write(REG_RET_VAL1, bytes_read)
+        return result
 
 
     def write_syscall(self, process: Process):
@@ -199,7 +200,6 @@ class Kernel:
 
         no_bytes_written, result = write_result
         process.cpu_context.regs.write(REG_RET_VAL1, no_bytes_written)
-        process.cpu_context.vm.dump_mem_in_bytes(buff_ptr, 8)
         return result
 
     def pipe_syscall(self, process: Process):
