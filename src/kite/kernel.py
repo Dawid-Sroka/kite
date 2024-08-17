@@ -170,11 +170,11 @@ class Kernel:
         open_file_object = process.fdt[fd]
         read_method = open_file_object.read
         if inspect.isgeneratorfunction(read_method):
-            yield from read_method(count)
+            bytes_read = yield from read_method(count)
         else:
             bytes_read = read_method(count)
 
-
+        process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, bytes_read)
 
     def write_syscall(self, process: Process):
         print(" write invoked!")
@@ -200,8 +200,8 @@ class Kernel:
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
 
-        process.cpu_context.vm.copy_into_vm(fds_ptr, read_fd)
-        process.cpu_context.vm.copy_into_vm(fds_ptr + WORD_SIZE, write_fd)
+        process.cpu_context.vm.copy_byte_in_vm(fds_ptr, read_fd)
+        process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
 
     def fork_syscall(self, process: Process):
         print(" fork invoked!")
