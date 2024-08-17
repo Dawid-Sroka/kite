@@ -12,6 +12,12 @@ class Process:
                     2: OpenFileObject("stderr", stderr)}
         self.pending_signals = [0]
 
+    def copy_fdt(self, source_process):
+        for k,v in source_process.fdt.items():
+            self.fdt[k] = v
+            if hasattr(v, "ref_cnt"):
+                v.ref_cnt += 1
+
 class ProcessTable:
     def __init__(self):
         self.table = {}

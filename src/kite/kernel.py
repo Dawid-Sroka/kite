@@ -20,7 +20,7 @@ class Kernel:
         self.simulator = simulator
         self.process_table = {}
         self.scheduler = scheduler
-        self.open_files_table = {}
+        self.open_files_table = []
 
     @classmethod
     def create(cls):
@@ -159,15 +159,11 @@ class Kernel:
         file_name = self.get_string_from_memory(process, file_name_pointer)
         print("# " + "       open file_name:", file_name)
         fd = max(process.fdt.keys()) + 1
-        if file_name in self.open_files_table.keys():
-            process.fdt[fd] = self.open_files_table[file_name]
-            self.open_files_table[file_name].ref_cnt += 1
-        else:
-            path = Path(__file__).parents[2] / "binaries" / file_name
-            f = open(path, 'a+')
-            ofo = RegularFile(file_name, f)
-            self.open_files_table[file_name] = ofo
-            process.fdt[fd] = ofo
+        path = Path(__file__).parents[2] / "binaries" / file_name
+        f = open(path, 'a+')
+        ofo = RegularFile(file_name, f)
+        self.open_files_table.append(ofo)
+        process.fdt[fd] = ofo
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
         print("#       ", process.fdt)
 
@@ -219,8 +215,8 @@ class Kernel:
         write_ofo = PipeWriteEnd("pipe_" + str(process.pid) + "_wr", buffer)
         read_ofo.write_end_ptr = write_ofo
         write_ofo.read_end_ptr = read_ofo
-        self.open_files_table["pipe_" + str(process.pid) + "_rd"] = read_ofo
-        self.open_files_table["pipe_" + str(process.pid) + "_wr"] = write_ofo
+        self.open_files_table.append(read_ofo)
+        self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
 
@@ -231,8 +227,7 @@ class Kernel:
         child_cpu_context = deepcopy(process.cpu_context)
         child = Process(child_cpu_context)
         # child = deepcopy(process)
-        for k,v in process.fdt.items():
-            child.fdt[k] = v
+        child.copy_fdt(process)
 
         child_pid = self.add_new_process(child)
         child.ppid = process.pid
