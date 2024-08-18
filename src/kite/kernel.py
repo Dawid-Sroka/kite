@@ -14,6 +14,9 @@ from time import sleep
 
 from pyrisc.sim.sim import Event, MemEvent
 
+import logging
+
+
 class Kernel:
 
     def __init__(self, simulator: Simulator, scheduler: Scheduler):
@@ -39,18 +42,18 @@ class Kernel:
         while True:
             # sleep(1)
             thread_object = self.scheduler.get_thread()
-            print(" ######## " + "ready", self.scheduler.dump_ready_queue())
-            print(" ######## " + "blocked", self.scheduler.dump_blocked_queue())
+            logging.info(f"ready {self.scheduler.dump_ready_queue()}")
+            logging.info(f"blocked {self.scheduler.dump_blocked_queue()}")
             if thread_object is None:
                 ## ultimately if there is noone ready, kernel should exit
-                print(" ######## " + "No more processes!")
+                logging.info(" ######## " + "No more processes!")
                 break
 
             pid, thread = thread_object
             # check pending signals mask
-            print(" ######## " + "scheduling proces with PID", pid)
+            logging.info(f"scheduling proces with PID {pid}")
             result = next(thread)
-            print(" ######## " + "process", pid, "yielded:", result[0], result[1].resource)
+            logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
             self.scheduler.update_processes_states(pid, thread, result)
             # self.scheduler.shift_queue()
 
@@ -64,14 +67,14 @@ class Kernel:
         process = self.process_table[pid]
         # event loop
         while True:
-            # print(" ### " + "PID =", pid)
+            # logging.info( "PID =", pid)
             # process.cpu_context.vm.dump_mem(0x8001ffe0, 8)
             self.simulator.load_context_into_cpu(process.cpu_context)
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
             result = yield from self.react_to_event(process, hardware_event)
             self.scheduler.update_processes_states(pid, self, result)
-            print(" ### " + "execution result", self.dump_result(result))
+            logging.info(f"execution result {self.dump_result(result)}")
 
     def dump_result(self, result):
         if result is None:
@@ -87,31 +90,31 @@ class Kernel:
     def react_to_event(self, process: Process, event: Event) -> None:
         # event, addr = cpu_event
         event_t = event.type
-        # print(" # " + "event: " + EXC_MSG[event_t])
+        # logging.info("event: " + EXC_MSG[event_t])
         result = None
         # Add Interrupt Descriptor Table??
         if event_t == EXC_ECALL:
             result = yield from self.call_syscall(process)
         elif event_t == EXC_CLOCK:
-            print(" # " + "event: " + EXC_MSG[event_t])
+            logging.info(f"event:  {EXC_MSG[event_t]}")
             # check whether time quantum elapsed
             # some action of scheduler
             yield 0
         # elif event_t == EXC_PAGE_FAULT:
         elif isinstance(event, MemEvent):
-            print(" # " + "event: " + EXC_MSG[event_t])
+            logging.info("event: " + EXC_MSG[event_t])
             fault_addr = event.fault_addr
-            print(" # " + "       fault_addr:", hex(fault_addr))
-            print(" # " + "       fault_pc:", hex(process.cpu_context.pc.read()))
+            logging.info(f"       fault_addr: {hex(fault_addr)}")
+            logging.info(f"       fault_pc: {hex(process.cpu_context.pc.read())}")
             if event_t == EXC_PAGE_FAULT_PERMS:
-                print(" # " + " SIGSEGV")
+                logging.info(" SIGSEGV")
                 raise NotImplementedError
             elif event_t == EXC_PAGE_FAULT_MISS:
                 area = process.cpu_context.vm.get_area_by_va(fault_addr)
                 if area is not None:
                     process.cpu_context.vm.add_page_containing_addr(fault_addr)
                 else:
-                    print(" # " + " SIGSEGV")
+                    logging.info(" SIGSEGV")
                     raise NotImplementedError
             else:
                 raise NotImplementedError
@@ -126,8 +129,8 @@ class Kernel:
 
     def call_syscall(self, process: Process):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
-        print(" # " + "event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
-        # print(" # " + " syscall number = " + str(syscall_no))
+        logging.info("event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
+        # logging.info(" syscall number = " + str(syscall_no))
         if inspect.isgeneratorfunction(syscall_dict[syscall_no]):
             result = yield from syscall_dict[syscall_no](self, process)
         else:
@@ -135,7 +138,7 @@ class Kernel:
         return result
 
     def exit_syscall(self, process: Process):
-        print(" # " + "       Process exited!")
+        logging.info("       Process exited!")
         self.scheduler.remove_thread()
         if process.pid == 1:    # I am init
             yield ("unblock", Resource("child state" , process.pid))
@@ -157,7 +160,7 @@ class Kernel:
     def open_syscall(self, process: Process):
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
-        print(" # " + "       open file_name:", file_name)
+        logging.info(f"       open file_name: {file_name}")
         fd = max(process.fdt.keys()) + 1
         path = Path(__file__).parents[2] / "binaries" / file_name
         f = open(path, 'a+')
@@ -165,7 +168,7 @@ class Kernel:
         self.open_files_table.append(ofo)
         process.fdt[fd] = ofo
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
-        print(" #       ", process.fdt)
+        logging.info(f"{process.fdt}")
 
     def read_syscall(self, process: Process):
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
@@ -241,20 +244,20 @@ class Kernel:
     def execve_syscall(self, process: Process):
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
-        print(" # " + " execve file_name:", file_name)
+        logging.info(f" execve file_name: {file_name}")
         path = Path(__file__).parents[2] / "binaries" / file_name
         new_context = parse_cpu_context_from_file(path)
         process.cpu_context = new_context
 
     def debug_print(self, process: Process):
         value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        print(" # " + hex(value))
+        logging.info(f"{hex(value)}")
         # process.cpu_context.vm.dump_mem(ptr, 1)
 
     def wait_syscall(self, process: Process):
         while True:
             if process.pending_signals[0] == 1:
-                print(" # " + " My child terminated!")
+                logging.info(" My child terminated!")
                 process.pending_signals[0] == 0
                 return
             else:

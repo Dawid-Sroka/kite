@@ -4,6 +4,8 @@ from kite.consts import *
 from pyrisc.sim.consts import *
 from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK, VPO_MASK
 
+import logging
+
 #--------------------------------------------------------------------------
 #   Configurations
 #--------------------------------------------------------------------------
@@ -139,7 +141,7 @@ class VMAreas(TranslatesAddresses):
         if pte == None:
             # there's no such page in pt
             # kernel must do something
-            print(" # " + "SIGSEGV")
+            logging.info("SIGSEGV")
             raise NotImplementedError
         if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
             page = pte.physical_page
@@ -149,13 +151,13 @@ class VMAreas(TranslatesAddresses):
             mem_byte = (mem_word >> offset * 8) & 0xFF
             return mem_byte
         else:
-            print(" # " + "SIGSEGV")
+            logging.info("SIGSEGV")
             raise NotImplementedError
 
     def dump_mem_in_bytes(self, pointer, count):
         loaded_bytes = self.load_bytes_from_vm(pointer, count)
         for i in range(count):
-            print(" # " + f"{hex(pointer + i)} {hex(loaded_bytes[i])}")
+            logging.info(f"{hex(pointer + i)} {hex(loaded_bytes[i])}")
 
     def dump_mem(self, pointer: int, count):
 
@@ -176,7 +178,7 @@ class VMAreas(TranslatesAddresses):
                 return 0
 
         for i in range(count):
-            print(" # " + f"{hex(pointer)} {hex(transparent_get_byte(pointer))}")
+            logging.info(f"{hex(pointer)} {hex(transparent_get_byte(pointer))}")
             pointer += 4
 
 
