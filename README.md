@@ -8,7 +8,7 @@ The motivation for this project is to give us a high-level, conceptual look at w
 
 # Installation
 
-`kite` project consists of kite source code and a `pyrisc` submodule - a cpu simulator source code. Clone the repo recursively:
+`kite` project consists of kite source code and a `pyrisc` submodule - a RISC-V cpu simulator. Clone the repo recursively:
 ```
 git clone --recursive git@github.com:Dawid-Sroka/kite.git
 ```
@@ -21,14 +21,12 @@ Then install the dependecies by running:
 ```
 pip install -r requirements.txt
 ```
-Now you are ready to run the kernel:
-```
-python -m kite
-```
-or:
-```
-cd src/kite
-python __main__.py
-```
 
-This runs the kernel which loads the program specified in `__main__.py` and executes it as the first userspace program.
+# Running Kite
+
+Kite can run binary user programs compiled for RISC-V. The `programs` directory contains example programs written in C and a minimal library. The `binaries` directory contains already compiled versions of these examples. To run one of them on kite execute:
+
+```
+python -u -m kite example_program
+```
+This launches Kite operating system and passes `example_program` as the first userspace program. The kernel logs are printed beginning with a `#`.
