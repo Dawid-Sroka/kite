@@ -7,16 +7,29 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
 def main(path_to_binary: Path, debug: bool = False):
-    handlers = [logging.FileHandler('logfile.log', mode='w')]
+    kernel = Kernel.create()
+
+    class ContextFilter(logging.Filter):
+        """
+        This filter injects cpu simulator's cycle count into the log.
+        """
+        def filter(self, record):
+            record.cycles_count = kernel.simulator.cpu.clock.cycles
+            pc = kernel.simulator.cpu.pc.r
+            record.pc = hex(pc) if pc > 0 else "before run"
+            return True
+
+    handlers = [logging.FileHandler('kernel.log', mode='w')]
     if debug:
         handlers.append(logging.StreamHandler())
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format='%(pc)s - %(cycles_count)s - %(message)s',
         handlers=handlers
     )
 
-    kernel = Kernel.create()
+    logging.getLogger().addFilter(ContextFilter())
+
     kernel.start(path_to_binary)
 
 app()
