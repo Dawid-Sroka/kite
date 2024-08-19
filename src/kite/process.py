@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import logging
 
 
-class Process:
+class ProcessImage:
     def __init__(self, cpu_context: CPUContext):
         self.cpu_context = cpu_context
         self.pid = -1
@@ -27,7 +27,7 @@ class ProcessTable:
         self.table = {}
         self.max_pid = 0
 
-    def add(self, process: Process):
+    def add(self, process: ProcessImage):
         new_pid =  self.max_pid + 1
         self.table[new_pid] = process
 

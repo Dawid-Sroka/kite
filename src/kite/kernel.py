@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import Process, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
+from kite.process import ProcessImage, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulator import Simulator
 
@@ -33,37 +33,37 @@ class Kernel:
         return kernel
 
     def start(self, init_program: str) -> None:
-        init = self.load_process_from_file(init_program)
-        init.pid = 1
-        self.process_table[1] = init
-        init_thread = self.thread(1)
-        self.scheduler.enqueue_thread((init.pid, init_thread))
+        init_image = self.load_process_image_from_file(init_program)
+        init_image.pid = 1
+        self.process_table[1] = init_image
+        init_process = self.process_routine(1)
+        self.scheduler.enqueue_process((init_image.pid, init_process))
 
         while True:
             # sleep(1)
-            thread_object = self.scheduler.get_thread()
+            process_entry = self.scheduler.get_process_entry()
             logging.info(f"ready {self.scheduler.dump_ready_queue()}")
             logging.info(f"blocked {self.scheduler.dump_blocked_queue()}")
-            if thread_object is None:
+            if process_entry is None:
                 ## ultimately if there is noone ready, kernel should exit
                 logging.info(" ######## " + "No more processes!")
                 break
 
-            pid, thread = thread_object
+            pid, process = process_entry
             # check pending signals mask
             logging.info(f"scheduling proces with PID {pid}")
-            result = next(thread)
+            result = next(process)
             logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
-            self.scheduler.update_processes_states(pid, thread, result)
+            self.scheduler.update_processes_states(pid, process, result)
             # self.scheduler.shift_queue()
 
-    def add_new_process(self, process: Process):
+    def add_new_process(self, process: ProcessImage):
         new_pid = max(self.process_table.keys()) + 1
         process.pid = new_pid
         self.process_table[new_pid] = process
         return new_pid
 
-    def thread(self, pid):
+    def process_routine(self, pid):
         process = self.process_table[pid]
         # event loop
         while True:
@@ -82,12 +82,12 @@ class Kernel:
         action, resource = result
         return (action, resource.resource)
 
-    def load_process_from_file(self, program_file: str) -> Process:
+    def load_process_image_from_file(self, program_file: str) -> ProcessImage:
         cpu_context = parse_cpu_context_from_file(program_file)
-        process = Process(cpu_context)
+        process = ProcessImage(cpu_context)
         return process
 
-    def react_to_event(self, process: Process, event: Event) -> None:
+    def react_to_event(self, process: ProcessImage, event: Event) -> None:
         # event, addr = cpu_event
         event_t = event.type
         # logging.info("event: " + EXC_MSG[event_t])
@@ -127,7 +127,7 @@ class Kernel:
 #   syscall implementations
 # --------------------------------------------------------------------------
 
-    def call_syscall(self, process: Process):
+    def call_syscall(self, process: ProcessImage):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         logging.info("event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
         # logging.info(" syscall number = " + str(syscall_no))
@@ -137,9 +137,9 @@ class Kernel:
             result = syscall_dict[syscall_no](self, process)
         return result
 
-    def exit_syscall(self, process: Process):
+    def exit_syscall(self, process: ProcessImage):
         logging.info("       Process exited!")
-        self.scheduler.remove_thread()
+        self.scheduler.remove_process()
         if process.pid == 1:    # I am init
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
@@ -147,7 +147,7 @@ class Kernel:
         # self.scheduler.notify_all_waiting_for_event()
         yield ("unblock", Resource("child state" , process.pid))
 
-    def get_string_from_memory(self, process: Process, string_pointer: int):
+    def get_string_from_memory(self, process: ProcessImage, string_pointer: int):
         d = ""
         virt_mem = process.cpu_context.vm
         c = virt_mem.get_byte(string_pointer)
@@ -157,7 +157,7 @@ class Kernel:
             c = virt_mem.get_byte(string_pointer)
         return d
 
-    def open_syscall(self, process: Process):
+    def open_syscall(self, process: ProcessImage):
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
         logging.info(f"       open file_name: {file_name}")
@@ -170,7 +170,7 @@ class Kernel:
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
 
-    def read_syscall(self, process: Process):
+    def read_syscall(self, process: ProcessImage):
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
         count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
@@ -189,7 +189,7 @@ class Kernel:
         return result
 
 
-    def write_syscall(self, process: Process):
+    def write_syscall(self, process: ProcessImage):
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
         count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
@@ -208,7 +208,7 @@ class Kernel:
         process.cpu_context.regs.write(REG_RET_VAL1, no_bytes_written)
         return result
 
-    def pipe_syscall(self, process: Process):
+    def pipe_syscall(self, process: ProcessImage):
         fds_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
@@ -226,9 +226,9 @@ class Kernel:
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr, read_fd)
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
 
-    def fork_syscall(self, process: Process):
+    def fork_syscall(self, process: ProcessImage):
         child_cpu_context = deepcopy(process.cpu_context)
-        child = Process(child_cpu_context)
+        child = ProcessImage(child_cpu_context)
         # child = deepcopy(process)
         child.copy_fdt(process)
         child_pid = self.add_new_process(child)
@@ -237,11 +237,11 @@ class Kernel:
 
         process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
         child.cpu_context.regs.write(REG_RET_VAL1, 0)
-        child_thread = self.thread(child_pid)
-        self.scheduler.enqueue_thread((child_pid, child_thread))
+        child_process = self.process_routine(child_pid)
+        self.scheduler.enqueue_process((child_pid, child_process))
 
 
-    def execve_syscall(self, process: Process):
+    def execve_syscall(self, process: ProcessImage):
         file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
         logging.info(f" execve file_name: {file_name}")
@@ -249,12 +249,12 @@ class Kernel:
         new_context = parse_cpu_context_from_file(path)
         process.cpu_context = new_context
 
-    def debug_print(self, process: Process):
+    def debug_print(self, process: ProcessImage):
         value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         logging.info(f"{hex(value)}")
         # process.cpu_context.vm.dump_mem(ptr, 1)
 
-    def wait_syscall(self, process: Process):
+    def wait_syscall(self, process: ProcessImage):
         while True:
             if process.pending_signals[0] == 1:
                 logging.info(" My child terminated!")
