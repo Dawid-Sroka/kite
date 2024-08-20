@@ -43,18 +43,16 @@ class OpenFileObject():
 class TerminalFile(OpenFileObject):
 
     def read(self, no_bytes_to_read):
-        f = self.file_struct
-        chars_read = f.read(no_bytes_to_read)
+        chars_read = self.file_struct.read(no_bytes_to_read)
         array_of_bytes_read = [ord(c) for c in chars_read]
         return (array_of_bytes_read, None)
 
     def write(self, array_of_bytes_to_write):
-        f = self.file_struct
         string_to_write = ""
         for i in range(len(array_of_bytes_to_write)):
             string_to_write += chr(array_of_bytes_to_write[i])
         no_bytes_written = self.file_struct.write(string_to_write)
-        f.flush()
+        self.file_struct.flush()
         return (no_bytes_written, None)
 
 
@@ -65,22 +63,20 @@ class RegularFile(OpenFileObject):
         self.position = 0
 
     def read(self, no_bytes_to_read):
-        f = self.file_struct
-        f.seek(self.position)
-        chars_read = f.read(no_bytes_to_read)
+        self.file_struct.seek(self.position)
+        chars_read = self.file_struct.read(no_bytes_to_read)
         self.position += len(chars_read)
         array_of_bytes_read = [ord(b) for b in chars_read]
         return (array_of_bytes_read, None)
 
     def write(self, array_of_bytes_to_write):
         position = 0
-        f = self.file_struct
-        f.seek(position)
+        self.file_struct.seek(position)
         string_to_write = ""
         for i in range(len(array_of_bytes_to_write)):
             string_to_write += chr(array_of_bytes_to_write[i])
         no_bytes_written = self.file_struct.write(string_to_write)
-        f.flush()
+        self.file_struct.flush()
         return (no_bytes_written, None)
 
 class PipeBuffer():
