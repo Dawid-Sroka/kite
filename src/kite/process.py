@@ -1,6 +1,4 @@
 from kite.cpu_context import CPUContext
-from sys import stdin, stdout, stderr
-from abc import ABC, abstractmethod
 import logging
 
 
@@ -10,9 +8,7 @@ class ProcessImage:
         self.pid = -1
         self.ppid = -1
         self.children = []
-        self.fdt = {0: OpenFileObject("stdin", stdin),
-                    1: OpenFileObject("stdout", stdout),
-                    2: OpenFileObject("stderr", stderr)}
+        self.fdt = {}
         self.pending_signals = [0]
 
     def copy_fdt(self, source_process):
@@ -38,10 +34,13 @@ class Resource:
         self.resource = resources_set
 
 
-class OpenFileObject(ABC):
+class OpenFileObject():
     def __init__(self, file_name, file_struct):
         self.file_struct = file_struct
         self.file_name = file_name
+
+
+class TerminalFile(OpenFileObject):
 
     def read(self, no_bytes_to_read):
         f = self.file_struct

@@ -1,5 +1,5 @@
 from kite.cpu_context import CPUContext, VMAreaStruct
-from kite.process import ProcessImage, ProcessTable, OpenFileObject, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
+from kite.process import ProcessImage, ProcessTable, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulator import Simulator
 
@@ -9,6 +9,7 @@ from kite.loading import check_elf, parse_cpu_context_from_file
 from pathlib import Path
 import inspect
 import os
+from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
 from time import sleep
 
@@ -35,6 +36,9 @@ class Kernel:
     def start(self, init_program: str) -> None:
         init_image = self.load_process_image_from_file(init_program)
         init_image.pid = 1
+        init_image.fdt = {0: TerminalFile("stdin", stdin),
+                          1: TerminalFile("stdout", stdout),
+                          2: TerminalFile("stderr", stderr)}
         self.process_table[1] = init_image
         init_process = self.process_routine(1)
         self.scheduler.enqueue_process((init_image.pid, init_process))
