@@ -53,12 +53,12 @@ class Kernel:
                 logging.info(" ######## " + "No more processes!")
                 break
 
-            pid, process = process_entry
+            pid, process_routine = process_entry
             # check pending signals mask
             logging.info(f"scheduling proces with PID {pid}")
-            result = next(process)
+            result = next(process_routine)
             logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
-            self.scheduler.update_processes_states(pid, process, result)
+            self.scheduler.update_processes_states(pid, process_routine, result)
             # self.scheduler.shift_queue()
 
     def add_new_process(self, process: ProcessImage):
