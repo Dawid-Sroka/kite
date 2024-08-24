@@ -24,9 +24,14 @@ pip install -r requirements.txt
 
 # Running Kite
 
-Kite can run binary user programs compiled for RISC-V. The `programs` directory contains example programs written in C and a minimal library. The `binaries` directory contains already compiled versions of these examples. To run one of them on kite execute:
+Kite can run binary user programs compiled for RISC-V, by executing them on the [`pyrisc`](https://github.com/snu-csl/pyrisc) simulator. The `programs` directory contains example programs written in C and a minimal library. The `binaries` directory contains versions of these examples, already compiled for `pyrisc`. To run one of them on kite execute:
 
 ```
-python -u -m kite example_program
+python -u -m kite path/to/example_program
 ```
-This launches Kite operating system and passes `example_program` as the first userspace program. The kernel logs are printed beginning with a `#`.
+This launches Kite operating system and passes `example_program` as the first userspace program.
+
+The Kite kernel produes logs which are by default saved in file `kernel.log` (by overwriting the content, not appending). If you add the `--debug` option then Kite logs will be printed to `stderr` as well.
+```
+python -u -m kite path/to/example_program --debug
+```
