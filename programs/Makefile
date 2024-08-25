@@ -1,11 +1,12 @@
 .PHONY: clean, distclean
 
-PREFIX      = riscv32-unknown-elf-
+PREFIX      = riscv64-linux-gnu-
 CC	        = $(PREFIX)gcc
 OBJDUMP	    = $(PREFIX)objdump
 
-CFLAGS      = -O0 -march=rv32i -mabi=ilp32 -static
-LDFLAGS     = -L. -T./link.ld -nostdlib -nostartfiles
+ARCH_FLAGS  = -march=rv32i -mabi=ilp32
+CFLAGS      = $(ARCH_FLAGS) -O0 -static -fno-pie -fno-pic
+LDFLAGS     = $(ARCH_FLAGS) -L. -static -fno-pie -fno-pic -T./link.ld -nostdlib -nostartfiles
 OBJDFLAGS   = -D --section=.text --section=.data
 
 KITELIB 	= syscalls/* crt0.s
