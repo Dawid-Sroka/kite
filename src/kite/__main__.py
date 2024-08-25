@@ -1,5 +1,6 @@
 from kite.kernel import Kernel
 from pathlib import Path
+from sys import stderr
 import logging
 import typer
 
@@ -21,7 +22,7 @@ def main(path_to_binary: Path, debug: bool = False):
 
     handlers = [logging.FileHandler('kernel.log', mode='w')]
     if debug:
-        handlers.append(logging.StreamHandler(sys.stderr))
+        handlers.append(logging.StreamHandler(stderr))
     logging.basicConfig(
         level=logging.INFO,
         format='%(pc)s - %(cycles_count)s - %(message)s',
