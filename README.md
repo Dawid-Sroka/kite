@@ -35,3 +35,15 @@ The Kite kernel produes logs which are by default saved in file `kernel.log` (by
 ```
 python -u -m kite path/to/example_program --debug
 ```
+
+# Compiling userspace programs
+
+Compiling userspace programs with the use of `riscv64-linux-gnu-gcc` package was tested on Arch linux. Download the compiler.
+```
+pacman -S riscv64-linux-gnu-gcc
+```
+Then you should be able to compile your own userspace programs using the Makefile provided in the project. Place your program in `programs` directory and specify its name (without the extension) as `PROG` variable. For example:
+```
+make PROG=simply_exit
+```
+This will compile file `simply_exit.c`, link it with the library provided in the project and produce an executable file named `simply_exit` in the `binaries` directory.
