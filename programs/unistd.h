@@ -1,3 +1,5 @@
+#define NULL 0
+
 typedef unsigned int size_t;
 void _exit();
 size_t write(int fd, const void* buf, size_t count);
