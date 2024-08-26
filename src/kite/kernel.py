@@ -174,6 +174,12 @@ class Kernel:
         process.cpu_context.regs.write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
 
+    def dup_syscall(self, process: ProcessImage):
+        oldfd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        newfd = max(process.fdt.keys()) + 1
+        process.fdt[newfd] = process.fdt[oldfd]
+        process.cpu_context.regs.write(REG_RET_VAL1, newfd)
+
     def read_syscall(self, process: ProcessImage):
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
