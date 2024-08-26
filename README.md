@@ -47,3 +47,5 @@ Then you should be able to compile your own userspace programs using the Makefil
 make PROG=simply_exit
 ```
 This will compile file `simply_exit.c`, link it with the library provided in the project and produce an executable file named `simply_exit` in the `binaries` directory.
+
+Alternatively, you can follow the compilation guide described in the `pyrisc` documentation. However, this requires building the compiler from sources.
