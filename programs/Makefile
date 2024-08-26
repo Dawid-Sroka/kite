@@ -5,8 +5,8 @@ CC	        = $(PREFIX)gcc
 OBJDUMP	    = $(PREFIX)objdump
 
 ARCH_FLAGS  = -march=rv32i -mabi=ilp32
-CFLAGS      = $(ARCH_FLAGS) -O0 -static -fno-pie -fno-pic
-LDFLAGS     = $(ARCH_FLAGS) -L. -static -fno-pie -fno-pic -T./link.ld -nostdlib -nostartfiles
+CFLAGS      = $(ARCH_FLAGS) -O0 -static -fno-pie -fno-pic -fno-stack-protector
+LDFLAGS     = $(ARCH_FLAGS) -L. -static -fno-pie -fno-pic -fno-stack-protector -T./link.ld -nostdlib -nostartfiles
 OBJDFLAGS   = -D --section=.text --section=.data
 
 KITELIB 	= syscalls/* crt0.s
