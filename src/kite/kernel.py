@@ -44,13 +44,12 @@ class Kernel:
         self.scheduler.enqueue_process((init_image.pid, init_process))
 
         while True:
-            # sleep(1)
             process_entry = self.scheduler.get_process_entry()
             logging.info(f"ready {self.scheduler.dump_ready_queue()}")
             logging.info(f"blocked {self.scheduler.dump_blocked_queue()}")
             if process_entry is None:
                 ## ultimately if there is noone ready, kernel should exit
-                logging.info(" ######## " + "No more processes!")
+                logging.info("No more processes!")
                 break
 
             pid, process_routine = process_entry
@@ -59,7 +58,6 @@ class Kernel:
             result = next(process_routine)
             logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
             self.scheduler.update_processes_states(pid, process_routine, result)
-            # self.scheduler.shift_queue()
 
     def add_new_process(self, process: ProcessImage):
         new_pid = max(self.process_table.keys()) + 1
@@ -71,8 +69,7 @@ class Kernel:
         process = self.process_table[pid]
         # event loop
         while True:
-            # logging.info( "PID =", pid)
-            # process.cpu_context.vm.dump_mem(0x8001ffe0, 8)
+            # check signals mask
             self.simulator.load_context_into_cpu(process.cpu_context)
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
@@ -92,11 +89,8 @@ class Kernel:
         return process
 
     def react_to_event(self, process: ProcessImage, event: Event) -> None:
-        # event, addr = cpu_event
         event_t = event.type
-        # logging.info("event: " + EXC_MSG[event_t])
         result = None
-        # Add Interrupt Descriptor Table??
         if event_t == EXC_ECALL:
             result = yield from self.call_syscall(process)
         elif event_t == EXC_CLOCK:
@@ -104,7 +98,6 @@ class Kernel:
             # check whether time quantum elapsed
             # some action of scheduler
             yield 0
-        # elif event_t == EXC_PAGE_FAULT:
         elif isinstance(event, MemEvent):
             logging.info("event: " + EXC_MSG[event_t])
             fault_addr = event.fault_addr
@@ -112,6 +105,7 @@ class Kernel:
             logging.info(f"       fault_pc: {hex(process.cpu_context.pc.read())}")
             if event_t == EXC_PAGE_FAULT_PERMS:
                 logging.info(" SIGSEGV")
+                #process.pending_signals[SIGSEGV] = 1
                 raise NotImplementedError
             elif event_t == EXC_PAGE_FAULT_MISS:
                 area = process.cpu_context.vm.get_area_by_va(fault_addr)
@@ -134,7 +128,6 @@ class Kernel:
     def call_syscall(self, process: ProcessImage):
         syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
         logging.info("event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
-        # logging.info(" syscall number = " + str(syscall_no))
         if inspect.isgeneratorfunction(syscall_dict[syscall_no]):
             result = yield from syscall_dict[syscall_no](self, process)
         else:
@@ -148,7 +141,6 @@ class Kernel:
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
         parent.pending_signals[0] = 1
-        # self.scheduler.notify_all_waiting_for_event()
         yield ("unblock", Resource("child state" , process.pid))
 
     def get_string_from_memory(self, process: ProcessImage, string_pointer: int):
@@ -243,7 +235,6 @@ class Kernel:
     def fork_syscall(self, process: ProcessImage):
         child_cpu_context = deepcopy(process.cpu_context)
         child = ProcessImage(child_cpu_context)
-        # child = deepcopy(process)
         child.copy_fdt(process)
         child_pid = self.add_new_process(child)
         child.ppid = process.pid
@@ -266,7 +257,6 @@ class Kernel:
     def debug_print(self, process: ProcessImage):
         value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         logging.info(f"{hex(value)}")
-        # process.cpu_context.vm.dump_mem(ptr, 1)
 
     def wait_syscall(self, process: ProcessImage):
         while True:
@@ -283,6 +273,7 @@ syscall_dict = {
                 1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
                 22: Kernel.pipe_syscall,
+                32: Kernel.dup_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall,

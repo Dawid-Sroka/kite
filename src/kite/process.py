@@ -96,7 +96,6 @@ class PipeReadEnd(OpenFileObject):
 
     def read(self, no_bytes_to_read):
         pipe_buffer = self.file_struct
-        # logging.info(" # " + "pipe buf: ", self.file_struct.buffer)
 
         while pipe_buffer.unread_count == 0:
             logging.info(" # " + "       read blocked! What should happen now?")
@@ -111,8 +110,6 @@ class PipeReadEnd(OpenFileObject):
             pipe_buffer.unread_count -= 1
             chars_read.append(read_char)
 
-        # logging.info(" # " + "pipe bytes_read", chars_read)
-        # logging.info(" # " + "pipe read is gonna return")
         bytes_read = chars_read
         return (bytes_read, ("unblock", Resource("I/O", self)))
 

@@ -99,7 +99,6 @@ class VMAreas(TranslatesAddresses):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
         vpo = (va & VPO_MASK) // WORD_SIZE
-        # pte = self.page_table.translate(vpn)
 
         area = self.get_area_by_vpn(vpn)
         if area != None:
