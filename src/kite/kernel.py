@@ -180,6 +180,10 @@ class Kernel:
         process.fdt[newfd] = process.fdt[oldfd]
         process.cpu_context.regs.write(REG_RET_VAL1, newfd)
 
+    def close_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        del process.fdt[fd]
+
     def read_syscall(self, process: ProcessImage):
         fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
