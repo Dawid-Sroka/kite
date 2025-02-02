@@ -44,6 +44,20 @@ By default, `kite` uses [Unicorn Engine](https://github.com/unicorn-engine/unico
 python -u -m kite path/to/example_program --simulator pyrisc
 ```
 
+# Testing
+
+Execute `test` script to run all tests:
+
+```
+./test
+```
+
+Test cases can be run separately, e.g.:
+
+```
+./tests/simply_exit unicorn
+```
+
 # Compiling userspace programs
 
 Compiling userspace programs with the use of `riscv64-linux-gnu-gcc` package was tested on Arch linux. Download the compiler.
