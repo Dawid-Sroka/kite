@@ -1,0 +1,10 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/waiting --simulator [lindex $argv 0] --debug
+
+expect "0x80000094 - event: syscall - pipe"
+expect "0x8000007c - event: syscall - fork"
+expect "0x800000ac - event: syscall - wait"
+expect "0x80000074 - event: syscall - exit"
+expect "0x80000074 - event: syscall - exit"
+expect eof

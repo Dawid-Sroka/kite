@@ -1,0 +1,7 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/simply_execve --simulator [lindex $argv 0] --debug
+
+expect "0x80000030 - event: syscall - execve"
+expect "0x80000030 -  execve file_name: simply_exit"
+expect eof

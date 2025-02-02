@@ -1,0 +1,7 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/simply_fork --simulator [lindex $argv 0] --debug
+
+expect "0x80000098 - event: syscall - fork"
+expect "0x80000084 - event: syscall - execve"
+expect eof

@@ -1,0 +1,8 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/simply_fork --simulator [lindex $argv 0] --debug
+
+expect "0x8000006c - event: syscall - open"
+expect "0x8000006c -        open file_name: file.log"
+expect "0x8000009c - event: syscall - write"
+expect eof

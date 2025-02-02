@@ -1,0 +1,8 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/piping --simulator [lindex $argv 0] --debug
+
+expect "0x800001a4 - event: syscall - pipe"
+expect "0x8000018c - event: syscall - fork"
+expect "0x800001c8 - event: syscall - write"
+expect eof

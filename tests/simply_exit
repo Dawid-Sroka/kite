@@ -1,0 +1,6 @@
+#!/usr/bin/expect
+
+spawn python -u src/kite/__main__.py binaries/simply_exit --simulator [lindex $argv 0] --debug
+
+expect "0x8000001c - event: syscall - exit"
+expect eof

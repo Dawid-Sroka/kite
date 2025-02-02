@@ -1,0 +1,30 @@
+#!/bin/bash
+
+declare -A FAILED_TESTS
+
+for SIMULATOR in "unicorn" "pyrisc"; do
+    FAILED_TESTS[$SIMULATOR]+=""
+    for file in tests/*; do
+        echo "--------------------------------"
+        echo "Running test: $file"
+        echo "--------------------------------"
+        ./$file $SIMULATOR
+        if [[ $? -ne 0 ]]; then
+            FAILED_TESTS[$SIMULATOR]+="$file "
+        fi
+        echo ""
+    done
+done
+
+for key in "${!FAILED_TESTS[@]}"; do
+    FAILED="${FAILED_TESTS[$key]}"
+    echo "Simulator: $key"
+    if [[ -z "$FAILED" ]]; then
+        echo "    All tests passed :)"
+    else
+        echo "    Some tests failed:"
+        echo "    $FAILED"
+    fi
+    echo ""
+done
+
