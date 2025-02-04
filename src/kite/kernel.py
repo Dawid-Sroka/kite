@@ -56,7 +56,10 @@ class Kernel:
             # check pending signals mask
             logging.info(f"scheduling proces with PID {pid}")
             result = next(process_routine)
-            logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
+            if result:
+                logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
+            else:
+                logging.info(f"process {pid} yielded")
             self.scheduler.update_processes_states(pid, process_routine, result)
 
     def add_new_process(self, process: ProcessImage):
@@ -98,7 +101,7 @@ class Kernel:
             logging.info(f"event:  {EXC_MSG[event_t]}")
             # check whether time quantum elapsed
             # some action of scheduler
-            yield 0
+            yield None
         elif isinstance(event, MemEvent):
             logging.info("event: " + EXC_MSG[event_t])
             fault_addr = event.fault_addr
