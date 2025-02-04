@@ -1,7 +1,7 @@
-from kite.cpu_context import CPUContext, VMAreaStruct
+from kite.cpu_context import VMAreaStruct
 from kite.process import ProcessImage, ProcessTable, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
-from kite.simulator import Simulator
+from kite.simulators.simulator import Simulator
 
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
@@ -84,7 +84,8 @@ class Kernel:
         return (action, resource.resource)
 
     def load_process_image_from_file(self, program_file: str) -> ProcessImage:
-        cpu_context = parse_cpu_context_from_file(program_file)
+        cpu_context = self.simulator.get_initial_context()
+        parse_cpu_context_from_file(cpu_context, program_file)
         process = ProcessImage(cpu_context)
         return process
 
@@ -102,7 +103,7 @@ class Kernel:
             logging.info("event: " + EXC_MSG[event_t])
             fault_addr = event.fault_addr
             logging.info(f"       fault_addr: {hex(fault_addr)}")
-            logging.info(f"       fault_pc: {hex(process.cpu_context.pc.read())}")
+            logging.info(f"       fault_pc: {hex(process.cpu_context.reg_read(REG_PC))}")
             if event_t == EXC_PAGE_FAULT_PERMS:
                 logging.info(" SIGSEGV")
                 #process.pending_signals[SIGSEGV] = 1
@@ -126,7 +127,7 @@ class Kernel:
 # --------------------------------------------------------------------------
 
     def call_syscall(self, process: ProcessImage):
-        syscall_no = process.cpu_context.regs.read(REG_SYSCALL_NUMBER)
+        syscall_no = process.cpu_context.reg_read(REG_SYSCALL_NUMBER)
         logging.info("event: " + EXC_MSG[EXC_ECALL] + " - " + syscall_names[syscall_no])
         if inspect.isgeneratorfunction(syscall_dict[syscall_no]):
             result = yield from syscall_dict[syscall_no](self, process)
@@ -154,7 +155,7 @@ class Kernel:
         return d
 
     def open_syscall(self, process: ProcessImage):
-        file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
         logging.info(f"       open file_name: {file_name}")
         fd = max(process.fdt.keys()) + 1
@@ -163,23 +164,23 @@ class Kernel:
         ofo = RegularFile(file_name, f)
         self.open_files_table.append(ofo)
         process.fdt[fd] = ofo
-        process.cpu_context.regs.write(REG_RET_VAL1, fd)
+        process.cpu_context.reg_write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
 
     def dup_syscall(self, process: ProcessImage):
-        oldfd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
-        process.cpu_context.regs.write(REG_RET_VAL1, newfd)
+        process.cpu_context.reg_write(REG_RET_VAL1, newfd)
 
     def close_syscall(self, process: ProcessImage):
-        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
 
     def read_syscall(self, process: ProcessImage):
-        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
-        count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        count = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
 
         open_file_object = process.fdt[fd]
         read_method = open_file_object.read
@@ -191,14 +192,14 @@ class Kernel:
         array_of_bytes_read, result = read_result
         process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, array_of_bytes_read)
         bytes_read = len(array_of_bytes_read)
-        process.cpu_context.regs.write(REG_RET_VAL1, bytes_read)
+        process.cpu_context.reg_write(REG_RET_VAL1, bytes_read)
         return result
 
 
     def write_syscall(self, process: ProcessImage):
-        fd = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
-        buff_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG1)
-        count = process.cpu_context.regs.read(REG_SYSCALL_ARG2)
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        count = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
 
         open_file_object = process.fdt[fd]
         f = open_file_object.file_struct
@@ -211,11 +212,11 @@ class Kernel:
             write_result = write_method(array_of_bytes_to_write)
 
         no_bytes_written, result = write_result
-        process.cpu_context.regs.write(REG_RET_VAL1, no_bytes_written)
+        process.cpu_context.reg_write(REG_RET_VAL1, no_bytes_written)
         return result
 
     def pipe_syscall(self, process: ProcessImage):
-        fds_ptr = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        fds_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         read_fd = max(process.fdt.keys()) + 1
         write_fd = max(process.fdt.keys()) + 2
 
@@ -240,22 +241,23 @@ class Kernel:
         child.ppid = process.pid
         process.children.append(child)
 
-        process.cpu_context.regs.write(REG_RET_VAL1, child_pid)
-        child.cpu_context.regs.write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL1, child_pid)
+        child.cpu_context.reg_write(REG_RET_VAL1, 0)
         child_process = self.process_routine(child_pid)
         self.scheduler.enqueue_process((child_pid, child_process))
 
 
     def execve_syscall(self, process: ProcessImage):
-        file_name_pointer = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
         logging.info(f" execve file_name: {file_name}")
         path = Path(__file__).parents[2] / "binaries" / file_name
-        new_context = parse_cpu_context_from_file(path)
+        cpu_context = self.simulator.get_initial_context()
+        new_context = parse_cpu_context_from_file(cpu_context, path)
         process.cpu_context = new_context
 
     def debug_print(self, process: ProcessImage):
-        value = process.cpu_context.regs.read(REG_SYSCALL_ARG0)
+        value = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         logging.info(f"{hex(value)}")
 
     def wait_syscall(self, process: ProcessImage):

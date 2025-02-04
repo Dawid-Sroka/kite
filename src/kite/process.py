@@ -1,4 +1,4 @@
-from kite.cpu_context import CPUContext
+from kite.simulators.simulator import CPUContext
 import logging
 
 

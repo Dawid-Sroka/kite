@@ -162,17 +162,3 @@ class VMAreas(TranslatesAddresses):
         for i in range(count):
             logging.info(f"{hex(pointer)} {hex(transparent_get_byte(pointer))}")
             pointer += 4
-
-
-class CPUContext:
-    def __init__(self, pc: Register, regs: RegisterFile, vm_areas: VMAreas):
-        self.pc = pc
-        self.regs = regs
-        self.vm = vm_areas
-
-    @classmethod
-    def create(cls):
-        pc = Register()
-        regs = RegisterFile()
-        vm_areas = VMAreas()
-        return cls(pc, regs, vm_areas)
