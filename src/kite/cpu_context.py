@@ -5,6 +5,8 @@ from pyrisc.sim.consts import *
 from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK, VPO_MASK
 
 import logging
+import mmap
+import copy
 
 #--------------------------------------------------------------------------
 #   Configurations
@@ -20,18 +22,41 @@ DMEM_START  = WORD(0x80010000)      # DMEM: 0x80010000 - 0x8001ffff (64KB)
 DMEM_SIZE   = WORD(64 * 1024)
 #--------------------------------------------------------------------------
 
+class PageTableEntry:
+    def __init__(self, vpn, prot, physical_page):
+        self.vpn = vpn
+        self.perms = prot
+        self.physical_page = physical_page
+
 class VMAreaStruct:
-    def __init__(self, area_start, area_size, area_prot, area_flags):
+    def __init__(self, area_start, area_size, area_prot, area_flags, data):
+        assert len(data) == area_size
+
         self.start_vpn = area_start >> VPO_LENTGH
         self.page_cnt = area_size >> VPO_LENTGH
         # dictionary of type {vpn : pte}
-        self.cached_pages = {}
+        self.mapped_pages = {}
         self.vm_prot = area_prot
         self.vm_flags = area_flags
+        self.data = data
+
+    def __deepcopy__(self, memo):
+        # Create a new instance without copying self.data (mmap object)
+        new_obj = VMAreaStruct.__new__(VMAreaStruct)
+        memo[id(self)] = new_obj
+
+        # Copy attributes manually, but skip mmap
+        for key, value in self.__dict__.items():
+            if isinstance(value, mmap.mmap):
+                setattr(new_obj, key, value)
+            else:
+                setattr(new_obj, key, copy.deepcopy(value, memo))
+
+        return new_obj
 
     def get_page(self, vpn) -> PageTableEntry:
-        if vpn in self.cached_pages.keys():
-            return self.cached_pages[vpn]
+        if vpn in self.mapped_pages.keys():
+            return self.mapped_pages[vpn]
         else:
             return None
 
@@ -92,11 +117,9 @@ class VMAreas(TranslatesAddresses):
 
         area = self.get_area_by_vpn(vpn)
         if area != None:
-            if vpn not in area.cached_pages.keys():
-                area.cached_pages[vpn] = PageTableEntry(vpn, area.vm_prot)
-                area.cached_pages[vpn].physical_page[vpo] = data
-            else:
-                area.cached_pages[vpn].physical_page[vpo] = data
+            if vpn not in area.mapped_pages.keys():
+                area.mapped_pages[vpn] = PageTableEntry(vpn, area.vm_prot)
+            area.mapped_pages[vpn].physical_page[vpo] = data
         else:
             raise NotImplementedError
 
@@ -114,12 +137,13 @@ class VMAreas(TranslatesAddresses):
         return None
 
     def add_page_containing_addr(self, addr):
-        new_page_addr = addr & VPN_MASK
         vpn = addr >> VPO_LENTGH
         area = self.get_area_by_va(addr)
         if area != None:
-            if vpn not in area.cached_pages.keys():
-                area.cached_pages[vpn] = PageTableEntry(vpn, area.vm_prot)
+            if vpn not in area.mapped_pages.keys():
+                page_offset = (vpn - area.start_vpn) << VPO_LENTGH
+                physical_page = bytearray(area.data[page_offset:page_offset + PAGE_SIZE])
+                area.mapped_pages[vpn] = PageTableEntry(vpn, area.vm_prot, physical_page)
         else:
             raise NotImplementedError
 
