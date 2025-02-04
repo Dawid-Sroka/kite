@@ -13,7 +13,7 @@ from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
 from time import sleep
 
-from pyrisc.sim.sim import Event, MemEvent
+from kite.consts import Event, MemEvent
 
 import logging
 

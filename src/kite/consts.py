@@ -8,6 +8,7 @@
 
 
 import numpy as np
+from abc import ABC
 
 # --------------------------------------------------------------------------
 #   Program: loads an ELF file into memory and supports disassembling
@@ -45,6 +46,7 @@ REG_SYSCALL_NUMBER      = 17
 REG_RET_VAL1            = 10
 REG_RET_VAL2            = 11
 
+REG_PC = 32
 
 #--------------------------------------------------------------------------
 #   Data types
@@ -218,3 +220,18 @@ syscall_names = {
                 100: "debug print",
                 247: "wait"
                 }
+
+class Event(ABC):
+    def __init__(self, exception_type: int):
+        self.type = exception_type
+
+class MemEvent(Event):
+    def __init__(self, exception_type: int, fault_addr: int, fault_pc: int):
+        super().__init__(exception_type)
+        self.fault_addr = fault_addr
+        self.fault_pc = fault_pc
+
+VPO_LENTGH = 12
+PAGE_SIZE = 2 ** VPO_LENTGH
+VPO_MASK = 2**VPO_LENTGH - 1
+VPN_MASK = 2**32 - 1 - VPO_MASK

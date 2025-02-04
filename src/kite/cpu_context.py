@@ -2,7 +2,7 @@ from pyrisc.sim.components import Register, RegisterFile, Memory
 from kite.consts import *
 
 from pyrisc.sim.consts import *
-from pyrisc.sim.components import TranslatesAddresses, PageTableEntry, VPO_LENTGH, VPN_MASK, VPO_MASK
+from kite.consts import VPO_LENTGH, VPO_MASK
 
 import logging
 import mmap
@@ -61,7 +61,7 @@ class VMAreaStruct:
             return None
 
 
-class VMAreas(TranslatesAddresses):
+class VMAreas:
     def __init__(self):
         self.vm_areas_list = []
 
