@@ -5,12 +5,19 @@ import logging
 import typer
 
 from kite.simulators.pyrisc import PyRISCSimulator
+from kite.simulators.unicorn import UnicornSimulator
+
+from kite.consts import REG_PC
+from unicorn.riscv_const import *
+
 app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
 def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
     if simulator == "pyrisc":
         simulator_obj = PyRISCSimulator()
+    elif simulator == "unicorn":
+        simulator_obj = UnicornSimulator()
     else:
         raise NotImplementedError(f"{simulator}: simulator not supported")
     kernel = Kernel.create(simulator_obj)
