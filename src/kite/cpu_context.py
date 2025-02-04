@@ -50,10 +50,7 @@ class VMAreas(TranslatesAddresses):
     def copy_byte_in_vm(self, va, byte_to_store):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
-        vpo = (va & VPO_MASK)
-        word_offset_in_page = vpo // WORD_SIZE
-        offset_in_word = vpo % WORD_SIZE
-        word_to_store = byte_to_store << (offset_in_word * 8)
+        byte_offset_in_page = (va & VPO_MASK)
 
         pte = self.translate(vpn)
         if pte == None:
@@ -61,10 +58,7 @@ class VMAreas(TranslatesAddresses):
             # kernel must do something
             raise NotImplementedError
         page = pte.physical_page
-        saved_word = page[word_offset_in_page]
-        saved_word = saved_word & ((1 << (word_offset_in_page * 8)) - 1)
-        word_to_store += saved_word
-        page[word_offset_in_page] = word_to_store
+        page[byte_offset_in_page] = byte_to_store
 
     def copy_bytes_in_vm(self, start_va, array_of_bytes):
         count = len(array_of_bytes)
@@ -75,8 +69,6 @@ class VMAreas(TranslatesAddresses):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
         vpo = (va & VPO_MASK)
-        word_offset_in_page = vpo // WORD_SIZE
-        offset_in_word = vpo % WORD_SIZE
 
         pte = self.translate(vpn)
         if pte == None:
@@ -84,9 +76,7 @@ class VMAreas(TranslatesAddresses):
             # kernel must do something
             raise NotImplementedError
         page = pte.physical_page
-        loaded_word = page[word_offset_in_page]
-        loaded_byte = (loaded_word >> (offset_in_word * 8)) & 0xFF
-        return loaded_byte
+        return page[vpo]
 
     def load_bytes_from_vm(self, start_va, count):
         returned_bytes = []
@@ -98,7 +88,7 @@ class VMAreas(TranslatesAddresses):
     def copy_into_vm(self, va, data):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
-        vpo = (va & VPO_MASK) // WORD_SIZE
+        vpo = (va & VPO_MASK)
 
         area = self.get_area_by_vpn(vpn)
         if area != None:
@@ -135,7 +125,7 @@ class VMAreas(TranslatesAddresses):
 
     def get_byte(self, pointer: int):
         vpn = pointer >> VPO_LENTGH
-        vpo = (pointer & VPO_MASK) // WORD_SIZE
+        vpo = (pointer & VPO_MASK)
         pte = self.translate(vpn)
         if pte == None:
             # there's no such page in pt
@@ -145,10 +135,7 @@ class VMAreas(TranslatesAddresses):
         if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
             page = pte.physical_page
             ppo = vpo
-            mem_word = page[ppo]
-            offset = pointer % 4
-            mem_byte = (mem_word >> offset * 8) & 0xFF
-            return mem_byte
+            return page[ppo]
         else:
             logging.info("SIGSEGV")
             raise NotImplementedError
@@ -162,17 +149,13 @@ class VMAreas(TranslatesAddresses):
 
         def transparent_get_byte(pointer):
             vpn = pointer >> VPO_LENTGH
-            vpo = (pointer & VPO_MASK) // WORD_SIZE
+            vpo = (pointer & VPO_MASK)
             pte = self.translate(vpn)
             if pte == None:
                 return 0
             if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
                 page = pte.physical_page
-                ppo = vpo
-                mem_word = page[ppo]
-                offset = pointer % 4
-                mem_byte = (mem_word >> offset * 8) & 0xFF
-                return mem_byte
+                return page[vpo]
             else:
                 return 0
 
