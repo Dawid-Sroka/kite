@@ -27,8 +27,7 @@ class Kernel:
         self.open_files_table = []
 
     @classmethod
-    def create(cls):
-        simulator = Simulator.create()
+    def create(cls, simulator: Simulator):
         scheduler = Scheduler()
         kernel = cls(simulator, scheduler)
         return kernel

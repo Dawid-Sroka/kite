@@ -4,11 +4,16 @@ from sys import stderr
 import logging
 import typer
 
+from kite.simulators.pyrisc import PyRISCSimulator
 app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
-def main(path_to_binary: Path, debug: bool = False):
-    kernel = Kernel.create()
+def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
+    if simulator == "pyrisc":
+        simulator_obj = PyRISCSimulator()
+    else:
+        raise NotImplementedError(f"{simulator}: simulator not supported")
+    kernel = Kernel.create(simulator_obj)
 
     class ContextFilter(logging.Filter):
         """
