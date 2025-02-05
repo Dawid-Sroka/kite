@@ -36,6 +36,14 @@ The Kite kernel produes logs which are by default saved in file `kernel.log` (by
 python -u -m kite path/to/example_program --debug
 ```
 
+## Specifying simulator
+
+By default, `kite` uses [Unicorn Engine](https://github.com/unicorn-engine/unicorn) as simulator. You can specify [PyRISC simulator](https://github.com/Dawid-Sroka/pyrisc) with `--simulator` option:
+
+```
+python -u -m kite path/to/example_program --simulator pyrisc
+```
+
 # Compiling userspace programs
 
 Compiling userspace programs with the use of `riscv64-linux-gnu-gcc` package was tested on Arch linux. Download the compiler.
