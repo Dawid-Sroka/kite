@@ -40,20 +40,6 @@ class VMAreaStruct:
         self.vm_flags = area_flags
         self.data = data
 
-    def __deepcopy__(self, memo):
-        # Create a new instance without copying self.data (mmap object)
-        new_obj = VMAreaStruct.__new__(VMAreaStruct)
-        memo[id(self)] = new_obj
-
-        # Copy attributes manually, but skip mmap
-        for key, value in self.__dict__.items():
-            if isinstance(value, mmap.mmap):
-                setattr(new_obj, key, value)
-            else:
-                setattr(new_obj, key, copy.deepcopy(value, memo))
-
-        return new_obj
-
     def get_page(self, vpn) -> PageTableEntry:
         if vpn in self.mapped_pages.keys():
             return self.mapped_pages[vpn]

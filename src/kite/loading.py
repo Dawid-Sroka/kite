@@ -39,7 +39,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
 
     # this is stack segment, it's not defined in ELF
     # TODO: research if it's always on such offset
-    segment_data = mmap.mmap(-1, 0x00010000, access=mmap.ACCESS_WRITE)
+    segment_data = bytes(0x10000)
     vm_areas_list.append(VMAreaStruct(0x80010000, 0x00010000, M_READ_WRITE, 0, segment_data))
 
     cpu_context.vm.vm_areas_list = vm_areas_list
