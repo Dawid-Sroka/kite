@@ -7,6 +7,7 @@ from kite.consts import VPO_LENTGH, VPO_MASK
 import logging
 import mmap
 import copy
+from sortedcontainers import SortedList
 
 #--------------------------------------------------------------------------
 #   Configurations
@@ -49,7 +50,8 @@ class VMAreaStruct:
 
 class VMAreas:
     def __init__(self):
-        self.vm_areas_list = []
+        key_func = lambda obj: obj.start_vpn
+        self.vm_areas_list = SortedList(key=key_func)
 
     def translate(self,vpn) -> PageTableEntry | None:
         area = self.get_area_by_vpn(vpn)
