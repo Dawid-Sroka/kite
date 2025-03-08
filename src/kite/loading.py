@@ -23,7 +23,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
             logging.info(ELF_ERR_MSG[ret] % program_file)
             return WORD(0)
 
-        entry_point = WORD(efh['e_entry'])
+        entry_point = np.uint64(efh['e_entry'])
         cpu_context.reg_write(REG_PC, entry_point)
 
         vm_areas_list = cpu_context.vm.vm_areas_list
@@ -36,7 +36,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
 
             if seg.header.p_filesz != 0:
                 segment_data = bytearray(area_size)
-                segment_data[:segment_size] = seg.data()
+                segment_data[:len(seg.data())] = seg.data()
                 # make sure this value won't be mutable
                 segment_data = bytes(segment_data)
             else:

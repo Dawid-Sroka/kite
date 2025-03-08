@@ -70,7 +70,7 @@ class UnicornSimulator:
         def hook_print_pc(_uc, addr, _size, _user_data):
             logging.info(f"PC = {addr:#x}")
 
-        cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV32)
+        cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV64)
 
         cpu.hook_add(UC_HOOK_CODE, hook_print_pc)
         cpu.hook_add(UC_HOOK_INTR, hook_intr)
