@@ -213,6 +213,7 @@ syscall_names = {
                 0:  "read",
                 1:  "write",
                 2:  "open",
+                13: "mmap",
                 22: "pipe",
                 45: "issetugid",
                 49: "readlinkat",
@@ -237,3 +238,6 @@ VPO_LENTGH = 12
 PAGE_SIZE = 2 ** VPO_LENTGH
 VPO_MASK = 2**VPO_LENTGH - 1
 VPN_MASK = 2**32 - 1 - VPO_MASK
+
+MMAP_SEGMENTS_RANGE_START = 0x300000000000
+MMAP_SEGMENTS_RANGE_END = 0x400000000000
