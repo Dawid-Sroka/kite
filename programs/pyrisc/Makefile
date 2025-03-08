@@ -12,7 +12,7 @@ OBJDFLAGS   = -D --section=.text --section=.data
 KITELIB 	= syscalls/* crt0.s
 
 PROG ?= simply_exit
-BINARIES_PATH = ../binaries
+BINARIES_PATH = ../../binaries
 
 $(PROG): $(PROG).c
 	$(CC) -c $(CFLAGS) -I. -o $(PROG).o $(PROG).c
