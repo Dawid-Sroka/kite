@@ -56,6 +56,7 @@ class UnicornSimulator:
                 cpu.emu_stop()
                 self.event = Event(EXC_ECALL)
             else:
+                logging.error(f'Unhandled intno: {intno}')
                 raise NotImplemented
         def hook_protected_mem(cpu, _type, address, _size, _value, _user_data):
             pc = self.reg_read(REG_PC)
