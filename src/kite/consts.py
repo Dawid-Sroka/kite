@@ -215,6 +215,7 @@ syscall_names = {
                 2:  "open",
                 22: "pipe",
                 45: "issetugid",
+                49: "readlinkat",
                 57: "fork",
                 59: "execve",
                 60: "exit",

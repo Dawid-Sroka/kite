@@ -184,6 +184,10 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, 1)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def readlinkat_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL2, -1)
+
     def read_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -284,6 +288,7 @@ syscall_dict = {
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
                 45: Kernel.issetugid_syscall,
+                49: Kernel.readlinkat_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
                 60: Kernel.exit_syscall,
