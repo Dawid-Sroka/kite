@@ -13,7 +13,7 @@ from unicorn.riscv_const import *
 app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
-def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
+def main(path_to_binary: Path, log_to_stdout: bool = False, simulator: str = "unicorn", debug: bool = False):
     if simulator == "pyrisc":
         simulator_obj = PyRISCSimulator()
     elif simulator == "unicorn":
@@ -32,7 +32,7 @@ def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
             return True
 
     handlers = [logging.FileHandler('kernel.log', mode='w')]
-    if debug:
+    if log_to_stdout:
         handlers.append(logging.StreamHandler(stderr))
     logging.basicConfig(
         level=logging.INFO,
@@ -41,6 +41,11 @@ def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
     )
 
     logging.getLogger().addFilter(ContextFilter())
+
+    if debug:
+        if simulator != "unicorn":
+            raise NotImplementedError("Launching GDB server is only supported for unicorn")
+        simulator_obj.launch_gdb_server()
 
     kernel.start(path_to_binary)
 

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [[ -z "$TMUX" ]]; then
+    echo "Error: This script must be run inside a tmux session." >&2
+    exit 1
+fi
+
+if [[ $# -ne 2 ]]; then
+    echo "Usage: $0 <binary_to_run> <binary_to_debug>" >&2
+    exit 1
+fi
+
+# Name the new window
+WINDOW_NAME="kite-dbg-$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 3)"
+
+# Set the programs to run in each pane
+PROGRAM1="python -u -m kite $1 --log-to-stdout --debug"
+PROGRAM2="gdb $2"
+
+# Create a new window in the current session
+tmux new-window -an "$WINDOW_NAME"
+
+# Split the window into two panes
+tmux split-window -h
+
+# Run the programs in the panes
+tmux send-keys -t "$WINDOW_NAME".0 "$PROGRAM1" C-m
+tmux send-keys -t "$WINDOW_NAME".1 "$PROGRAM2" C-m
+
+# Select the second pane as active (optional)
+tmux select-pane -t "$WINDOW_NAME".1
+
+# Switch to the new window
+tmux select-window -t "$WINDOW_NAME"

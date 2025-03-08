@@ -1,5 +1,6 @@
 from kite.cpu_context import VMAreas
 from kite.simulators.simulator import CPUContext
+from udbserver import udbserver
 
 from kite.consts import Event, MemEvent
 
@@ -70,6 +71,7 @@ class UnicornSimulator:
             logging.info(f"PC = {addr:#x}")
 
         cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV32)
+
         cpu.hook_add(UC_HOOK_CODE, hook_print_pc)
         cpu.hook_add(UC_HOOK_INTR, hook_intr)
         cpu.hook_add(UC_HOOK_MEM_UNMAPPED, hook_unmapped_mem)
@@ -113,6 +115,9 @@ class UnicornSimulator:
         UC_ERR_FETCH_UNMAPPED,
         UC_ERR_FETCH_PROT
     ]
+
+    def launch_gdb_server(self):
+        udbserver(self.cpu, 1234)
 
     def run(self):
         self.event = Event(EXC_CLOCK)
