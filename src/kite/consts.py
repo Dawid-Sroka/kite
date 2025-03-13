@@ -223,6 +223,7 @@ syscall_names = {
                 22: "pipe",
                 37: "sigaltstack",
                 38: "sigprocmask",
+                40: "ioctl",
                 45: "issetugid",
                 49: "readlinkat",
                 57: "fork",
