@@ -80,6 +80,32 @@ class VMAreas:
         for i in range(count):
             self.copy_byte_in_vm(start_va + i, array_of_bytes[i])
 
+    def copy_byte_in_vm_as_kernel(self, va, byte_to_store):
+        vpn = va >> VPO_LENTGH
+        VPO_MASK = 2**VPO_LENTGH - 1
+        byte_offset_in_page = (va & VPO_MASK)
+
+        area = self.get_area_by_vpn(vpn)
+
+        # We are kernel, we cannot fail
+        if area is None:
+            raise NotImplementedError("Kernel panic :(((")
+
+        pte = area.get_page(vpn)
+
+        if pte == None:
+            self.add_page_containing_addr(va)
+            pte = area.get_page(vpn)
+
+        page = pte.physical_page
+        page[byte_offset_in_page] = byte_to_store
+
+    # "as kernel" means handling page faults already in these function
+    def copy_bytes_in_vm_as_kernel(self, start_va, array_of_bytes):
+        count = len(array_of_bytes)
+        for i in range(count):
+            self.copy_byte_in_vm_as_kernel(start_va + i, array_of_bytes[i])
+
     def load_byte_from_vm(self, va):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
