@@ -220,6 +220,7 @@ syscall_names = {
                 11: "fstat",
                 12: "sbrk",
                 13: "mmap",
+                18: "sigaction",
                 22: "pipe",
                 37: "sigaltstack",
                 38: "sigprocmask",

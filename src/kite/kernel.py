@@ -282,6 +282,12 @@ class Kernel:
 
         process.cpu_context.vm.brk += increment
         logging.info(f'old brk = 0x{brk:x}, new brk = 0x{process.cpu_context.vm.brk}')
+
+    def sigaction_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def mmap_syscall(self, process: ProcessImage):
         size = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
 
@@ -422,6 +428,7 @@ syscall_dict = {
                 11: Kernel.fstat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
+                18: Kernel.sigaction_syscall,
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
                 37: Kernel.sigaltstack_syscall,
