@@ -156,6 +156,12 @@ class Kernel:
             c = virt_mem.get_byte(string_pointer)
         return d
 
+    def __modify_sysroot_path(self, path):
+        if os.path.isabs(path):
+            # Substitute the prefix in the absolute path
+            return os.path.join(os.getcwd(), 'sysroot', os.path.relpath(path, os.path.sep))
+        return path
+
     def open_syscall(self, process: ProcessImage):
         file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         file_name = self.get_string_from_memory(process, file_name_pointer)
@@ -169,6 +175,25 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
 
+    def openat_syscall(self, process: ProcessImage):
+        AT_FDCWD = -100
+        # TODO: implement it properly
+        fd = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        if fd != AT_FDCWD:
+            raise NotImplementedError("Only AT_FDCWD value for file descriptor is supported")
+        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        file_name = self.get_string_from_memory(process, file_name_pointer)
+        file_name = self.__modify_sysroot_path(file_name)
+        logging.info(f"       open file_name: {file_name}")
+        fd = max(process.fdt.keys()) + 1
+        path = Path(__file__).parents[2] / "binaries" / file_name
+        f = open(path, 'a+')
+        ofo = RegularFile(file_name, f)
+        self.open_files_table.append(ofo)
+        process.fdt[fd] = ofo
+        process.cpu_context.reg_write(REG_RET_VAL1, fd)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+        logging.info(f"{process.fdt}")
     def dup_syscall(self, process: ProcessImage):
         oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = max(process.fdt.keys()) + 1
@@ -335,6 +360,7 @@ syscall_dict = {
                 0:  Kernel.read_syscall,
                 1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
+                5:  Kernel.openat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 22: Kernel.pipe_syscall,

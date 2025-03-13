@@ -215,6 +215,7 @@ syscall_names = {
                 0:  "read",
                 1:  "write",
                 2:  "open",
+                5:  "openat",
                 12: "sbrk",
                 13: "mmap",
                 22: "pipe",
