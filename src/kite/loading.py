@@ -60,7 +60,6 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
     vm_areas_list.add(VMAreaStruct(stack_offset, stack_size, M_READ_WRITE, 0, segment_data))
 
     cpu_context.vm.vm_areas_list = vm_areas_list
-    return cpu_context
     cpu_context.vm.initial_brk = initial_brk
     cpu_context.vm.brk = initial_brk
 

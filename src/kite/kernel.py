@@ -414,8 +414,8 @@ class Kernel:
         logging.info(f" execve file_name: {file_name}")
         path = Path(__file__).parents[2] / "binaries" / file_name
         cpu_context = self.simulator.get_initial_context()
-        new_context = parse_cpu_context_from_file(cpu_context, path)
-        process.cpu_context = new_context
+        parse_cpu_context_from_file(cpu_context, path)
+        process.cpu_context = cpu_context
 
     def debug_print(self, process: ProcessImage):
         value = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
