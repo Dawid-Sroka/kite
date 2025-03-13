@@ -216,6 +216,7 @@ syscall_names = {
                 1:  "write",
                 2:  "open",
                 5:  "openat",
+                11: "fstat",
                 12: "sbrk",
                 13: "mmap",
                 22: "pipe",

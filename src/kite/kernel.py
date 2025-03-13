@@ -11,7 +11,7 @@ import inspect
 import os
 from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
-from time import sleep
+import struct
 
 from kite.consts import Event, MemEvent
 
@@ -194,6 +194,48 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
         logging.info(f"{process.fdt}")
+
+    def fstat_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        # TODO: do we really want to pass all host values?
+
+        # Is file stdin, stdout or stderr?
+        if 0 <= fd <= 2:
+            stat_info = os.fstat(fd)
+        else:
+            file_path = process.fdt[fd].file_name
+            stat_info = os.stat(file_path)
+
+        # Define the format for the struct based on the attributes you need
+        # struct 'st_mode', 'st_ino', 'st_dev', 'st_nlink', 'st_uid', 'st_gid', 'st_size', 'st_atime', 'st_mtime', 'st_ctime'
+        # You can use format codes like: 'I' for unsigned int, 'H' for unsigned short, 'Q' for unsigned long long, etc.
+        stat_format = 'HHIHIIHI16s16s16s4sII'  # example format string for 10 fields (you can modify this based on needed fields)
+
+        # Pack the stat values into bytes
+        stat_bytes = struct.pack(
+            stat_format,
+            np.uint16(stat_info.st_dev),
+            0,
+            stat_info.st_mode,
+            np.uint16(stat_info.st_nlink),
+            stat_info.st_uid,
+            stat_info.st_gid,
+            np.uint16(stat_info.st_rdev),
+            stat_info.st_size,
+            bytes(16),
+            bytes(16),
+            bytes(20),
+            bytes(4), # padding
+            stat_info.st_blksize,
+            stat_info.st_blocks
+        )
+        process.cpu_context.vm.copy_bytes_in_vm(statbuf_ptr, stat_bytes)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def dup_syscall(self, process: ProcessImage):
         oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = max(process.fdt.keys()) + 1
@@ -361,6 +403,8 @@ syscall_dict = {
                 1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
                 5:  Kernel.openat_syscall,
+                11:  Kernel.fstat_syscall,
+                11: Kernel.fstat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 22: Kernel.pipe_syscall,
