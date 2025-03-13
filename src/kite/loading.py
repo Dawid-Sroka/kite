@@ -54,7 +54,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
     # that will work both for rv32 and rv64?
     stack_offset = 0x7fffff7ff000
     stack_size = 8*1024*1024 # 8MiB
-    stack_pointer_initial_value = 0x7fffffffeff0
+    stack_pointer_initial_value = 0x7fffffffe000
     cpu_context.reg_write(SP, stack_pointer_initial_value)
     segment_data = bytes(stack_size)
     vm_areas_list.add(VMAreaStruct(stack_offset, stack_size, M_READ_WRITE, 0, segment_data))
@@ -62,6 +62,19 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
     cpu_context.vm.vm_areas_list = vm_areas_list
     cpu_context.vm.initial_brk = initial_brk
     cpu_context.vm.brk = initial_brk
+
+    # Setup argc and argv
+    argc_addr = stack_pointer_initial_value
+    argv_addr = stack_pointer_initial_value + 0x8
+    arg_value_ptr = stack_pointer_initial_value + 0x20
+    arg_value = stack_pointer_initial_value + 0x40
+    tmp = 1
+    logging.info(f'argc addr = {argc_addr:x}')
+    cpu_context.vm.copy_bytes_in_vm_as_kernel(argc_addr, tmp.to_bytes(4, byteorder='little'))
+    cpu_context.vm.copy_bytes_in_vm_as_kernel(argv_addr, arg_value_ptr.to_bytes(8, byteorder='little'))
+    # cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value_ptr, arg_value.to_bytes(8, byteorder='little'))
+    cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value_ptr, 'lua'.encode('ascii'))
+    cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value, 'lua'.encode('ascii'))
 
 def check_elf(filename, header):
         e_ident = header['e_ident']
