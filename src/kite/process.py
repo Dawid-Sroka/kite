@@ -43,7 +43,7 @@ class OpenFileObject():
 class TerminalFile(OpenFileObject):
 
     def read(self, no_bytes_to_read):
-        chars_read = self.file_struct.read(no_bytes_to_read)
+        chars_read = self.file_struct.readline(no_bytes_to_read)
         array_of_bytes_read = [ord(c) for c in chars_read]
         return (array_of_bytes_read, None)
 
