@@ -222,6 +222,7 @@ syscall_names = {
                 13: "mmap",
                 18: "sigaction",
                 22: "pipe",
+                26: "clock_gettime",
                 37: "sigaltstack",
                 38: "sigprocmask",
                 40: "ioctl",

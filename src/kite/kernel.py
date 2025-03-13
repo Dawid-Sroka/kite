@@ -382,6 +382,12 @@ class Kernel:
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr, read_fd)
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
 
+    def clock_gettime_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        timespec_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        process.cpu_context.vm.copy_bytes_in_vm(timespec_ptr, bytes(16))
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def fork_syscall(self, process: ProcessImage):
         child_cpu_context = deepcopy(process.cpu_context)
         child = ProcessImage(child_cpu_context)
@@ -430,6 +436,7 @@ syscall_dict = {
                 13: Kernel.mmap_syscall,
                 18: Kernel.sigaction_syscall,
                 22: Kernel.pipe_syscall,
+                26: Kernel.clock_gettime_syscall,
                 32: Kernel.dup_syscall,
                 37: Kernel.sigaltstack_syscall,
                 38: Kernel.sigprocmask_syscall,
