@@ -343,7 +343,7 @@ class Kernel:
             read_result = read_method(count)
 
         array_of_bytes_read, result = read_result
-        process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, array_of_bytes_read)
+        process.cpu_context.vm.copy_bytes_in_vm_as_kernel(buff_ptr, array_of_bytes_read)
         bytes_read = len(array_of_bytes_read)
         process.cpu_context.reg_write(REG_RET_VAL1, bytes_read)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
