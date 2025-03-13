@@ -52,6 +52,8 @@ class VMAreas:
     def __init__(self):
         key_func = lambda obj: obj.start_vpn
         self.vm_areas_list = SortedList(key=key_func)
+        self.initial_brk = 0
+        self.brk = 0
 
     def translate(self,vpn) -> PageTableEntry | None:
         area = self.get_area_by_vpn(vpn)

@@ -26,6 +26,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
         entry_point = np.uint64(efh['e_entry'])
         cpu_context.reg_write(REG_PC, entry_point)
 
+        initial_brk = 0x0
         vm_areas_list = cpu_context.vm.vm_areas_list
         for seg in ef.iter_segments('PT_LOAD'):
             segment_offset = seg.header.p_paddr
@@ -44,6 +45,7 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
 
             logging.info(f"Mapping segment on <0x{area_offset:X}, 0x{area_offset + area_size:X}>")
             area = VMAreaStruct(area_offset, area_size, M_READ_ONLY, 0, segment_data)
+            initial_brk = max(initial_brk, area_offset + area_size)
             vm_areas_list.add(area)
 
     # this is stack segment, it's not defined in ELF
@@ -59,6 +61,8 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
 
     cpu_context.vm.vm_areas_list = vm_areas_list
     return cpu_context
+    cpu_context.vm.initial_brk = initial_brk
+    cpu_context.vm.brk = initial_brk
 
 def check_elf(filename, header):
         e_ident = header['e_ident']

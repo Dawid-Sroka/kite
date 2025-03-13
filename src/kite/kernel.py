@@ -178,7 +178,28 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def sbrk_syscall(self, process: ProcessImage):
+        increment = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        brk = process.cpu_context.vm.brk
+        process.cpu_context.reg_write(REG_RET_VAL1, brk)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+        if increment < 0:
+            raise NotImplementedError("brk: negative increment is not supported")
+        if increment == 0:
+            return
+
+        vm_areas_list = process.cpu_context.vm.vm_areas_list
+        for area in vm_areas_list:
+            area_offset_start = area.start_vpn << VPO_LENTGH
+            area_offset_end = area_offset_start + (area.page_cnt << VPO_LENTGH)
+
+            if area_offset_end == brk:
+                vm_areas_list.add(VMAreaStruct(brk, increment, M_READ_WRITE, 0, bytes(increment)))
+                break
+
+        process.cpu_context.vm.brk += increment
+        logging.info(f'old brk = 0x{brk:x}, new brk = 0x{process.cpu_context.vm.brk}')
     def mmap_syscall(self, process: ProcessImage):
         size = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
 
@@ -314,6 +335,7 @@ syscall_dict = {
                 0:  Kernel.read_syscall,
                 1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
+                12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
