@@ -144,6 +144,7 @@ class Kernel:
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
         parent.pending_signals[0] = 1
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
         yield ("unblock", Resource("child state" , process.pid))
 
     def get_string_from_memory(self, process: ProcessImage, string_pointer: int):
@@ -260,6 +261,9 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def sbrk_syscall(self, process: ProcessImage):
         increment = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         brk = process.cpu_context.vm.brk
@@ -342,6 +346,7 @@ class Kernel:
         process.cpu_context.vm.copy_bytes_in_vm(buff_ptr, array_of_bytes_read)
         bytes_read = len(array_of_bytes_read)
         process.cpu_context.reg_write(REG_RET_VAL1, bytes_read)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
         return result
 
 
@@ -362,6 +367,7 @@ class Kernel:
 
         no_bytes_written, result = write_result
         process.cpu_context.reg_write(REG_RET_VAL1, no_bytes_written)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
         return result
 
     def pipe_syscall(self, process: ProcessImage):
