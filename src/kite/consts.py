@@ -221,6 +221,7 @@ syscall_names = {
                 12: "sbrk",
                 13: "mmap",
                 22: "pipe",
+                37: "sigaltstack",
                 45: "issetugid",
                 49: "readlinkat",
                 57: "fork",
