@@ -11,6 +11,7 @@ import inspect
 import os
 from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
+from kite.struct_definitions import UContext
 import struct
 
 from kite.consts import Event, MemEvent
@@ -253,6 +254,37 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def setcontext_syscall(self, process: ProcessImage):
+        # Currently only general purpose registers are updated
+        # TODO: Add support for other fields of ucontext_t
+        statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        regs_to_update = [
+                REG_RV,
+                REG_RA,
+                REG_SP,
+                REG_GP,
+                REG_TP,
+                REG_S0,
+                REG_S1,
+                REG_S2,
+                REG_S3,
+                REG_S4,
+                REG_S5,
+                REG_S6,
+                REG_S7,
+                REG_S8,
+                REG_S9,
+                REG_S10,
+                REG_S11,
+                REG_PC,
+        ]
+
+        data = process.cpu_context.vm.load_bytes_from_vm(statbuf_ptr, UContext.SIZE)
+        reg_values = UContext.unpack(bytes(data))["gregs"]
+
+        for reg in regs_to_update:
+            process.cpu_context.reg_write(reg, reg_values[reg])
+
     def ioctl_syscall(self, process: ProcessImage):
         # TODO: implement it properly
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
@@ -447,6 +479,7 @@ syscall_dict = {
                 32: Kernel.dup_syscall,
                 37: Kernel.sigaltstack_syscall,
                 38: Kernel.sigprocmask_syscall,
+                39: Kernel.setcontext_syscall,
                 40: Kernel.ioctl_syscall,
                 45: Kernel.issetugid_syscall,
                 49: Kernel.readlinkat_syscall,

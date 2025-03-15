@@ -226,6 +226,7 @@ syscall_names = {
                 26: "clock_gettime",
                 37: "sigaltstack",
                 38: "sigprocmask",
+                39: "setcontext",
                 40: "ioctl",
                 45: "issetugid",
                 49: "readlinkat",
