@@ -31,22 +31,61 @@ ELF_ERR_MSG = {
 
 # Register aliases:
 
-RA                      = 1
-SP                      = 2
+# The order of registers is based on mcontext_t from ucontext_t,
+# Changing these values will break setcontext/getcontext syscall
+REG_RA = 0
+REG_SP = 1
+REG_GP = 2
+REG_TP = 3
+REG_T0 = 4
+REG_T1 = 5
+REG_T2 = 6
+REG_S0 = 7
+REG_S1 = 8
+REG_A0 = 9
+REG_A1 = 10
+REG_A2 = 11
+REG_A3 = 12
+REG_A4 = 13
+REG_A5 = 14
+REG_A6 = 15
+REG_A7 = 16
+REG_S2 = 17
+REG_S3 = 18
+REG_S4 = 19
+REG_S5 = 20
+REG_S6 = 21
+REG_S7 = 22
+REG_S8 = 23
+REG_S9 = 24
+REG_S10 = 25
+REG_S11 = 26
+REG_T3 = 27
+REG_T4 = 28
+REG_T5 = 29
+REG_T6 = 30
 
-REG_SYSCALL_ARG0        = 10
-REG_SYSCALL_ARG1        = 11
-REG_SYSCALL_ARG2        = 12
-REG_SYSCALL_ARG3        = 13
-REG_SYSCALL_ARG4        = 14
-REG_SYSCALL_ARG5        = 15
+REG_PC = 31
+REG_SR = 32
+REG_TVAL = 33
+REG_CAUSE = 34
 
-REG_SYSCALL_NUMBER      = 17
+REG_RV = REG_A0
 
-REG_RET_VAL1            = 10
-REG_RET_VAL2            = 11
+RA                      = REG_RA
+SP                      = REG_SP
 
-REG_PC = 32
+REG_SYSCALL_ARG0        = REG_A0
+REG_SYSCALL_ARG1        = REG_A1
+REG_SYSCALL_ARG2        = REG_A2
+REG_SYSCALL_ARG3        = REG_A3
+REG_SYSCALL_ARG4        = REG_A4
+REG_SYSCALL_ARG5        = REG_A5
+
+REG_SYSCALL_NUMBER      = REG_A7
+
+REG_RET_VAL1            = REG_A0
+REG_RET_VAL2            = REG_A1
 
 #--------------------------------------------------------------------------
 #   Data types
