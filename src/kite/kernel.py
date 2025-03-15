@@ -12,7 +12,7 @@ import inspect
 import os
 from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
-from kite.struct_definitions import UContext
+from kite.struct_definitions import UContext, Sigaction
 import struct
 
 from kite.consts import Event, MemEvent
@@ -321,7 +321,24 @@ class Kernel:
         logging.info(f'old brk = 0x{brk:x}, new brk = 0x{process.cpu_context.vm.brk}')
 
     def sigaction_syscall(self, process: ProcessImage):
-        # TODO: implement it properly
+        signal_number = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        new_action_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        # TODO: handle old action
+
+        try:
+            signal = Signal(signal_number)
+        except ValueError:
+            # TODO: handle it with errno and proper return value
+            raise NotImplementedError("Incorrect signal number")
+
+        supported_signals = [Signal.SIGCHLD, Signal.SIGINT]
+        if signal not in supported_signals:
+            raise NotImplementedError(f'Unsupported syscall number: {signal}, only {supported_signals} are supported')
+
+        data = process.cpu_context.vm.load_bytes_from_vm(new_action_pointer, Sigaction.SIZE)
+        new_action = Sigaction.unpack(bytes(data))
+        process.sigactions[signal.value] = new_action
+
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
