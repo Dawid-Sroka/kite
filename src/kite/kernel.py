@@ -432,6 +432,7 @@ class Kernel:
 
 
 syscall_dict = {
+                1: Kernel.exit_syscall,
                 2:  Kernel.open_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
@@ -451,7 +452,6 @@ syscall_dict = {
                 49: Kernel.readlinkat_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
-                60: Kernel.exit_syscall,
                 100: Kernel.debug_print,
                 247: Kernel.wait_syscall
                 }

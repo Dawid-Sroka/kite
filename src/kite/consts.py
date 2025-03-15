@@ -212,6 +212,7 @@ EXC_MSG = {
 #--------------------------------------------------------------------------
 
 syscall_names = {
+                1: "exit",
                 2:  "open",
                 3:  "read",
                 4:  "write",
@@ -230,7 +231,6 @@ syscall_names = {
                 49: "readlinkat",
                 57: "fork",
                 59: "execve",
-                60: "exit",
                 100: "debug print",
                 247: "wait"
                 }
