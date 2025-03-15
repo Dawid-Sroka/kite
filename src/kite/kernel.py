@@ -2,6 +2,7 @@ from kite.cpu_context import VMAreaStruct, M_READ_WRITE
 from kite.process import ProcessImage, ProcessTable, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulators.simulator import Simulator
+from kite.signals import Signal, create_signal_context
 
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
@@ -144,7 +145,7 @@ class Kernel:
         if process.pid == 1:    # I am init
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
-        parent.pending_signals[0] = 1
+        parent.pending_signals.set(Signal.SIGCHLD)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
         yield ("unblock", Resource("child state" , process.pid))
 
@@ -455,9 +456,9 @@ class Kernel:
 
     def wait_syscall(self, process: ProcessImage):
         while True:
-            if process.pending_signals[0] == 1:
+            if process.pending_signals.is_set(Signal.SIGCHLD):
                 logging.info(" My child terminated!")
-                process.pending_signals[0] == 0
+                process.pending_signals.unset(Signal.SIGCHLD)
                 return
             else:
                 yield ("block", Resource("child state", [child.pid for child in process.children]))
