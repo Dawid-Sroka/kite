@@ -108,7 +108,7 @@ class UnicornSimulator:
 
         self.cpu = cpu
         self.event = None
-        self.CLOCK_CYCLES = 1000
+        self.CLOCK_CYCLES = 100000
         self.vm = VMAreas()
 
     def get_initial_context(self) -> CPUContext:
