@@ -11,6 +11,7 @@ from unicorn.riscv_const import *
 
 import ctypes
 import logging
+import copy
 
 reg_to_unicorn_reg = {
     REG_RA: UC_RISCV_REG_RA,
@@ -71,6 +72,10 @@ class UnicornContext:
 
     def reg_write(self, reg, value):
         reg_write(self.uc_context, reg, value)
+
+    # We want to have copy of registers, but preserve the same memory
+    def copy_for_signal_handler(self):
+        return UnicornContext(copy.deepcopy(self.uc_context), self.vm)
 
 class UnicornSimulator:
     def __init__(self):
