@@ -1,15 +1,28 @@
 from kite.simulators.simulator import CPUContext
 import logging
+from kite.signals import SignalSet, SIGNAL_NUM, SIG_DFL
+from collections import deque
 
 
 class ProcessImage:
     def __init__(self, cpu_context: CPUContext):
-        self.cpu_context = cpu_context
+        # process context and all signal contexts
+        self.cpu_context_stack = deque()
+        self.cpu_context_stack.append(cpu_context)
         self.pid = -1
         self.ppid = -1
         self.children = []
         self.fdt = {}
-        self.pending_signals = [0]
+        self.pending_signals = SignalSet()
+        self.sigactions = [SIG_DFL] * SIGNAL_NUM
+
+    @property
+    def cpu_context(self):
+        return self.cpu_context_stack[-1]
+
+    @cpu_context.setter
+    def cpu_context(self, context):
+        self.cpu_context_stack[-1] = context
 
     def copy_fdt(self, source_process):
         for k,v in source_process.fdt.items():

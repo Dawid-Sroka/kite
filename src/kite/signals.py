@@ -1,6 +1,6 @@
 from enum import Enum
 import copy
-from kite.consts import REG_RA, REG_PC, SIGNAL_RETURN_ADDRESS
+from kite.consts import REG_RA, REG_PC, SIGNAL_RETURN_ADDRESS, REG_SYSCALL_ARG0
 
 SIGNAL_NUM = 32
 
@@ -32,13 +32,14 @@ class Signal(Enum):
     SIGUSR1 = 30
     SIGUSR2 = 31
 
-def create_signal_context(sigaction, context):
+def create_signal_context(signal, sigaction, context):
     new_context = context.copy_for_signal_handler()
 
     # TODO: handle sigaction["mask"] and sigaction["flags"]
 
     # jump to signal handler
     new_context.reg_write(REG_PC, sigaction["handler"])
+    new_context.reg_write(REG_SYSCALL_ARG0, signal.value)
 
     # after returning from handler, jump to this address to restore previous context
     new_context.reg_write(REG_RA, SIGNAL_RETURN_ADDRESS)

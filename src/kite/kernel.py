@@ -14,6 +14,7 @@ from sys import stdin, stdout, stderr
 from copy import deepcopy, copy
 from kite.struct_definitions import UContext, Sigaction, Stat
 import struct
+import signal
 
 from kite.consts import Event, MemEvent
 
@@ -27,6 +28,11 @@ class Kernel:
         self.process_table = {}
         self.scheduler = scheduler
         self.open_files_table = []
+        self.actual_process = None
+        signal.signal(signal.SIGINT, lambda signum, frame: self.handle_signal(signum, frame))
+
+    def handle_signal(self, _, _frame):
+        self.actual_process.pending_signals.set(Signal.SIGINT)
 
     @classmethod
     def create(cls, simulator: Simulator):
@@ -54,6 +60,7 @@ class Kernel:
                 break
 
             pid, process_routine = process_entry
+            self.actual_process = self.process_table[pid]
             # check pending signals mask
             logging.info(f"scheduling proces with PID {pid}")
             result = next(process_routine)
@@ -73,7 +80,18 @@ class Kernel:
         process = self.process_table[pid]
         # event loop
         while True:
-            # check signals mask
+            # if some signal is pending, handle it
+            # TODO: handle ignoring and blocking signals
+            pending_sig = process.pending_signals.get_any()
+
+            # TODO: handle also SIGCHLD
+            if pending_sig:
+                logging.info(f'entering signal handler for {pending_sig}')
+                sigaction = process.sigactions[pending_sig.value]
+                new_context = create_signal_context(pending_sig, sigaction, process.cpu_context)
+                process.cpu_context_stack.append(new_context)
+                process.pending_signals.unset(pending_sig)
+
             self.simulator.load_context_into_cpu(process.cpu_context)
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
@@ -116,6 +134,11 @@ class Kernel:
                 area = process.cpu_context.vm.get_area_by_va(fault_addr)
                 if area is not None:
                     process.cpu_context.vm.add_page_containing_addr(fault_addr)
+                elif fault_addr == SIGNAL_RETURN_ADDRESS:
+                    # it means signal handler returned, restore previous context
+                    # TODO: maybe we want to unset pending mask here?
+                    process.cpu_context_stack.pop()
+                    yield None
                 else:
                     logging.info(" SIGSEGV")
                     raise NotImplementedError
