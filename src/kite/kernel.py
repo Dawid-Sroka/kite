@@ -399,11 +399,11 @@ class Kernel:
 
 
 syscall_dict = {
-                0:  Kernel.read_syscall,
-                1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
+                3:  Kernel.read_syscall,
+                4:  Kernel.write_syscall,
                 5:  Kernel.openat_syscall,
-                11:  Kernel.fstat_syscall,
+                6:  Kernel.close_syscall,
                 11: Kernel.fstat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
