@@ -165,12 +165,17 @@ class Kernel:
         return result
 
     def exit_syscall(self, process: ProcessImage):
+        # TODO: reparent zombies to init
+        assert process.zombie_pids == []
         logging.info("       Process exited!")
         self.scheduler.remove_process()
         if process.pid == 1:    # I am init
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
         parent.pending_signals.set(Signal.SIGCHLD)
+        parent.zombie_pids.append(process.pid)
+        for fd in process.fdt.keys():
+            self.__unlink_fd(process, fd)
         if LOG_FD_CHANGES:
             logging.info(process.fdt)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
