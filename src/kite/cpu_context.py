@@ -89,8 +89,7 @@ class VMAreas:
 
         # We are kernel, we cannot fail
         if area is None:
-            raise NotImplementedError("Kernel panic :(((")
-
+            raise NotImplementedError("Kernel panic")
         pte = area.get_page(vpn)
 
         if pte == None:
@@ -105,6 +104,14 @@ class VMAreas:
         count = len(array_of_bytes)
         for i in range(count):
             self.copy_byte_in_vm_as_kernel(start_va + i, array_of_bytes[i])
+
+    def write_int(self, address, value):
+        bytes = value.to_bytes(4, byteorder='little')
+        self.copy_bytes_in_vm_as_kernel(address, bytes)
+
+    def write_long(self, address, value):
+        bytes = value.to_bytes(8, byteorder='little')
+        self.copy_bytes_in_vm_as_kernel(address, bytes)
 
     def load_byte_from_vm(self, va):
         vpn = va >> VPO_LENTGH
@@ -125,6 +132,34 @@ class VMAreas:
             next_byte = self.load_byte_from_vm(start_va + i)
             returned_bytes.append(next_byte)
         return returned_bytes
+
+    def read_int(self, address):
+        bytes = self.load_bytes_from_vm(address, 4)
+        return int.from_bytes(bytes, 'little')
+
+    def read_string(self, address):
+        d = ""
+        c = self.get_byte_as_kernel(address)
+        while c != 0:
+            d += chr(c)
+            address += 1
+            c = self.get_byte_as_kernel(address)
+        return d
+
+    # Read type: char *strings[]
+    def read_string_list(self, address):
+        # TODO: well, this is super naive, there should be some validation
+        offset = 0
+        result = []
+        while True:
+            arg_addr_bytes = self.load_bytes_from_vm(address + offset, 8)
+            arg_addr = int.from_bytes(arg_addr_bytes, 'little')
+            if arg_addr == 0:
+                break
+            string = self.read_string(arg_addr)
+            result.append(string)
+            offset += 8
+        return result
 
     def copy_into_vm(self, va, data):
         vpn = va >> VPO_LENTGH
@@ -172,6 +207,30 @@ class VMAreas:
             # kernel must do something
             logging.info("SIGSEGV")
             raise NotImplementedError
+        if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
+            page = pte.physical_page
+            ppo = vpo
+            return page[ppo]
+        else:
+            logging.info("SIGSEGV")
+            raise NotImplementedError
+
+    def get_byte_as_kernel(self, pointer: int):
+        vpn = pointer >> VPO_LENTGH
+        vpo = (pointer & VPO_MASK)
+
+        area = self.get_area_by_vpn(vpn)
+
+        # We are kernel, we cannot fail
+        if area is None:
+            raise NotImplementedError("Kernel panic :(((")
+
+        pte = area.get_page(vpn)
+
+        if pte == None:
+            self.add_page_containing_addr(pointer)
+            pte = area.get_page(vpn)
+
         if pte.perms == M_READ_ONLY or pte.perms == M_READ_WRITE:
             page = pte.physical_page
             ppo = vpo

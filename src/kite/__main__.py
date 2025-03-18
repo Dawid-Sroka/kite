@@ -3,6 +3,7 @@ from pathlib import Path
 from sys import stderr
 import logging
 import typer
+from typing import List
 
 from kite.simulators.pyrisc import PyRISCSimulator
 from kite.simulators.unicorn import UnicornSimulator
@@ -13,7 +14,7 @@ from unicorn.riscv_const import *
 app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
-def main(path_to_binary: Path, log_to_stdout: bool = False, simulator: str = "unicorn", debug: bool = False):
+def main(path_to_binary: List[str], log_to_stdout: bool = False, simulator: str = "unicorn", debug: bool = False):
     if simulator == "pyrisc":
         simulator_obj = PyRISCSimulator()
     elif simulator == "unicorn":
@@ -27,8 +28,10 @@ def main(path_to_binary: Path, log_to_stdout: bool = False, simulator: str = "un
         This filter injects cpu simulator's cycle count into the log.
         """
         def filter(self, record):
-            pc = kernel.simulator.reg_read(REG_PC)
+            process = kernel.current_process
+            pc = process.cpu_context.reg_read(REG_PC) if process else -1
             record.pc = hex(pc) if pc > 0 else "before run"
+            record.pid = process.pid if process else "-"
             return True
 
     handlers = [logging.FileHandler('kernel.log', mode='w')]
@@ -36,7 +39,7 @@ def main(path_to_binary: Path, log_to_stdout: bool = False, simulator: str = "un
         handlers.append(logging.StreamHandler(stderr))
     logging.basicConfig(
         level=logging.INFO,
-        format='%(pc)s - %(message)s',
+        format='[%(pid)s] %(pc)s - %(message)s',
         handlers=handlers
     )
 

@@ -7,7 +7,7 @@ from elftools.elf import elffile as elf
 import logging
 import mmap
 
-def parse_cpu_context_from_file(cpu_context, program_file: str):
+def parse_cpu_context_from_file(cpu_context, program_file: str, argv, env):
     logging.info(f"Loading file {program_file}")
     try:
         f = open(program_file, 'rb')
@@ -63,18 +63,25 @@ def parse_cpu_context_from_file(cpu_context, program_file: str):
     cpu_context.vm.initial_brk = initial_brk
     cpu_context.vm.brk = initial_brk
 
-    # Setup argc and argv
+    # Setup argc, argv and envp
     argc_addr = stack_pointer_initial_value
-    argv_addr = stack_pointer_initial_value + 0x8
-    arg_value_ptr = stack_pointer_initial_value + 0x20
-    arg_value = stack_pointer_initial_value + 0x40
-    tmp = 1
-    logging.info(f'argc addr = {argc_addr:x}')
-    cpu_context.vm.copy_bytes_in_vm_as_kernel(argc_addr, tmp.to_bytes(4, byteorder='little'))
-    cpu_context.vm.copy_bytes_in_vm_as_kernel(argv_addr, arg_value_ptr.to_bytes(8, byteorder='little'))
-    # cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value_ptr, arg_value.to_bytes(8, byteorder='little'))
-    cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value_ptr, 'lua'.encode('ascii'))
-    cpu_context.vm.copy_bytes_in_vm_as_kernel(arg_value, 'lua'.encode('ascii'))
+    argv_addr = stack_pointer_initial_value + 8
+    env_addr = argv_addr + (8 * (len(argv) + 1))
+    cpu_context.vm.write_int(argc_addr, len(argv))
+
+    value_addr = argv_addr + (8 * (len(argv) + len(env))) + 16
+    for i, arg in enumerate(argv):
+        env_bytes = arg.encode('ascii') + b'\x00'
+        cpu_context.vm.copy_bytes_in_vm_as_kernel(value_addr, env_bytes)
+        cpu_context.vm.write_long(argv_addr + (i * 8), value_addr)
+        value_addr += len(env_bytes)
+
+    for i, arg in enumerate(env):
+        env_bytes = arg.encode('ascii') + b'\x00'
+        cpu_context.vm.copy_bytes_in_vm_as_kernel(value_addr, env_bytes)
+        cpu_context.vm.write_long(env_addr + (i * 8), value_addr)
+        value_addr += len(env_bytes)
+
 
 def check_elf(filename, header):
         e_ident = header['e_ident']

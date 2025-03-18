@@ -99,9 +99,14 @@ SWORD               = np.int32
 
 INT_SIZE = 4
 
-INT = np.int32
+ULONG = np.uint64
 LONG = lambda x: np.int64(np.uint64(x))
+
+UINT = np.uint32
+INT = lambda x: np.int32(np.uint32(x & 0xffffffff))
+
 USHORT = np.uint16
+SHORT = lambda x: np.int16(np.uint16(x & 0xffff))
 
 #--------------------------------------------------------------------------
 #   RISC-V constants
@@ -257,27 +262,49 @@ EXC_MSG = {
 
 syscall_names = {
                 1: "exit",
-                2:  "open",
+                2:  "fork",
                 3:  "read",
                 4:  "write",
                 5:  "openat",
                 6:  "close",
+                7:  "lseek",
+                9:  "getpid",
+                10: "kill",
                 11: "fstat",
                 12: "sbrk",
                 13: "mmap",
+                15: "getdents",
                 16: "dup",
                 17: "dup2",
                 18: "sigaction",
-                22: "pipe",
+                20: "wait4",
+                23: "faccessat",
+                24: "fstatat",
+                25: "pipe2",
                 26: "clock_gettime",
+                28: "execve",
+                29: "getppid",
+                30: "setpgid",
+                31: "getpgid",
+                32: "umask",
+                35: "chdir",
+                36: "getcwd",
                 37: "sigaltstack",
                 38: "sigprocmask",
                 39: "setcontext",
                 40: "ioctl",
+                41: "getresuid",
+                42: "getresgid",
                 45: "issetugid",
+                46: "fcntl",
                 49: "readlinkat",
-                57: "fork",
-                59: "execve",
+                55: "sigsuspend",
+                59: "setgroups",
+                60: "setsid",
+                64: "setuid",
+                67: "setgid",
+                81: "setitimer",
+                86: "sigtimedwait",
                 100: "debug print",
                 247: "wait"
                 }
@@ -299,3 +326,5 @@ VPN_MASK = 2**32 - 1 - VPO_MASK
 
 MMAP_SEGMENTS_RANGE_START = 0x300000000000
 MMAP_SEGMENTS_RANGE_END = 0x400000000000
+
+AT_FDCWD = -100

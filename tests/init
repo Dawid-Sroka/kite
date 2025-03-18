@@ -1,0 +1,64 @@
+#!/usr/bin/env python
+
+import pexpect
+import time
+import re
+
+child = pexpect.spawn("python -u -m kite sysroot/sbin/init --simulator unicorn")
+child.timeout = 2
+
+def sendchars(chars):
+    for char in chars:
+        child.send(char)
+
+def sendline(line):
+    sendchars(line)
+    child.send("\r")
+
+# HACK: I'm not sure why we need to send " ", probably escape codes
+# are messing up with pyexpect
+child.send(" ")
+child.expect("localhost login:")
+sendline("root")
+
+child.expect("Password:")
+sendline("root")
+child.send(" ")
+
+child.expect("#")
+sendline("cat /etc/.kshrc | wc")
+child.expect("4 13 71")
+
+child.expect("#")
+sendline("cat")
+sendline("abc")
+child.expect("abc")
+child.sendcontrol('z')
+child.expect(r"\[1\] \+ Stopped              cat")
+child.expect("#")
+sendline("fg")
+child.expect("cat")
+sendline("def")
+child.expect("def")
+child.sendcontrol('c')
+
+child.expect("#")
+sendchars("abc")
+sendchars('\x03') # send ^C
+
+child.expect("#")
+sendline("while true; do echo \"abc\"; done")
+child.expect("abc")
+sendchars('\x03') # send ^C
+
+child.expect("#")
+sendline("cd ../usr/include")
+child.expect("#")
+sendline("cat pwd.h")
+child.expect("__END_DECLS")
+
+child.expect("#")
+sendline("exit")
+child.expect(pexpect.EOF)
+
+print("Test passed :)")

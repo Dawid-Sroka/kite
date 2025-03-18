@@ -1,10 +1,24 @@
 from enum import Enum
 import copy
+
+from numpy import core
 from kite.consts import REG_RA, REG_PC, SIGNAL_RETURN_ADDRESS, REG_SYSCALL_ARG0
 
 SIGNAL_NUM = 32
 
 SIG_DFL = 0
+SIG_IGN = 1
+
+SIG_BLOCK = 1
+SIG_UNBLOCK = 2
+SIG_SETMASK = 3
+
+STATUS_EXITED = 0
+def STATUS_SIGNALED(signal):
+    return signal.value
+
+def STATUS_STOPPED(signal):
+    return signal.value << 8 | 0x7f
 
 class Signal(Enum):
     SIGHUP = 1
@@ -32,6 +46,18 @@ class Signal(Enum):
     SIGUSR1 = 30
     SIGUSR2 = 31
 
+class DefaultAction(Enum):
+    Term = 1
+    Core = 2
+    Ign = 3
+    Stop = 4
+    Cont = 5
+
+# TODO: fill this structure
+default_action = {}
+default_action[Signal.SIGINT] = DefaultAction.Term
+default_action[Signal.SIGTSTP] = DefaultAction.Stop
+
 def create_signal_context(signal, sigaction, context):
     new_context = context.copy_for_signal_handler()
 
@@ -48,20 +74,30 @@ def create_signal_context(signal, sigaction, context):
 
 class SignalSet:
     def __init__(self):
-        self.mask = [False] * (SIGNAL_NUM)
+        self.pending_mask = [False] * (SIGNAL_NUM)
+        self.blocked_mask = [False] * (SIGNAL_NUM)
 
-    def set(self, signal: Signal):
-        self.mask[signal.value] = True
+    def set_pending(self, signal: Signal):
+        self.pending_mask[signal.value] = True
 
-    def unset(self, signal: Signal):
-        self.mask[signal.value] = False
+    def unset_pending(self, signal: Signal):
+        self.pending_mask[signal.value] = False
 
-    def is_set(self, signal: Signal) -> bool:
-        return self.mask[signal.value]
+    def set_blocked(self, signal: Signal):
+        self.blocked_mask[signal.value] = True
+
+    def unset_blocked(self, signal: Signal):
+        self.blocked_mask[signal.value] = False
+
+    def is_pending(self, signal: Signal) -> bool:
+        return self.pending_mask[signal.value]
+
+    def is_blocked(self, signal: Signal) -> bool:
+        return self.blocked_mask[signal.value]
 
     def get_any(self) -> Signal | None:
         for i in range(SIGNAL_NUM):
-            if self.mask[i]:
+            if self.pending_mask[i] and not self.blocked_mask[i]:
                 return Signal(i)
         return None
 
