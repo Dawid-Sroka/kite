@@ -1,4 +1,5 @@
 import struct
+from kite.consts import USHORT
 
 class UContext:
     FORMAT = "Q Q I 24s 35Q 33Q 64s"
@@ -46,3 +47,31 @@ class Sigaction:
             "mask": unpacked_data[1],
             "flags": unpacked_data[2],
         }
+
+class Stat:
+    FORMAT = 'HHIHIIHI16s16s16s4sII'
+    SIZE = 88
+
+    @staticmethod
+    def pack(stat_info):
+        return struct.pack(
+            Stat.FORMAT,
+            USHORT(stat_info.st_dev),
+            0,
+            stat_info.st_mode,
+            USHORT(stat_info.st_nlink),
+            stat_info.st_uid,
+            stat_info.st_gid,
+            USHORT(stat_info.st_rdev),
+            stat_info.st_size,
+            bytes(16),
+            bytes(16),
+            bytes(20),
+            bytes(4), # padding
+            stat_info.st_blksize,
+            stat_info.st_blocks
+        )
+
+    @staticmethod
+    def unpack(binary_data):
+        raise NotImplementedError("unpacking struct stract is not supported")

@@ -97,6 +97,7 @@ SWORD               = np.int32
 INT_SIZE = 4
 
 LONG = lambda x: np.int64(np.uint64(x))
+USHORT = np.uint16
 
 #--------------------------------------------------------------------------
 #   RISC-V constants
