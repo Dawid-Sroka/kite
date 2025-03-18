@@ -7,6 +7,8 @@ from kite.signals import Signal, create_signal_context
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
 
+from kite.log_defs import *
+
 from pathlib import Path
 import inspect
 import os
@@ -169,6 +171,8 @@ class Kernel:
             yield ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
         parent.pending_signals.set(Signal.SIGCHLD)
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
         yield ("unblock", Resource("child state" , process.pid))
 
@@ -198,8 +202,9 @@ class Kernel:
         ofo = RegularFile(file_name, f)
         self.open_files_table.append(ofo)
         process.fdt[fd] = ofo
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
-        logging.info(f"{process.fdt}")
 
     def openat_syscall(self, process: ProcessImage):
         AT_FDCWD = -100
@@ -217,6 +222,8 @@ class Kernel:
         ofo = RegularFile(file_name, f)
         self.open_files_table.append(ofo)
         process.fdt[fd] = ofo
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
         logging.info(f"{process.fdt}")
@@ -435,6 +442,8 @@ class Kernel:
         self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
 
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr, read_fd)
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
