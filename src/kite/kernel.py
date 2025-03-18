@@ -252,6 +252,22 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def dup2_syscall(self, process: ProcessImage):
+        oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        newfd = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        if newfd in process.fdt:
+            process.fdt[newfd].ref_cnt -= 1
+            del process.fdt[newfd]
+        else:
+            process.fdt[oldfd].ref_cnt += 1
+
+        process.fdt[newfd] = process.fdt[oldfd]
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+        process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def dup_syscall(self, process: ProcessImage):
         oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = max(process.fdt.keys()) + 1
@@ -506,10 +522,11 @@ syscall_dict = {
                 11: Kernel.fstat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
+                16: Kernel.dup_syscall,
+                17: Kernel.dup2_syscall,
                 18: Kernel.sigaction_syscall,
                 22: Kernel.pipe_syscall,
                 26: Kernel.clock_gettime_syscall,
-                32: Kernel.dup_syscall,
                 37: Kernel.sigaltstack_syscall,
                 38: Kernel.sigprocmask_syscall,
                 39: Kernel.setcontext_syscall,

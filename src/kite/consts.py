@@ -265,6 +265,8 @@ syscall_names = {
                 11: "fstat",
                 12: "sbrk",
                 13: "mmap",
+                16: "dup",
+                17: "dup2",
                 18: "sigaction",
                 22: "pipe",
                 26: "clock_gettime",
