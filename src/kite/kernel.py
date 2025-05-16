@@ -307,6 +307,11 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def sigaltstack_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def sigprocmask_syscall(self, process: ProcessImage):
         how = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         set_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -368,6 +373,25 @@ class Kernel:
 
         for reg in regs_to_update:
             process.cpu_context.reg_write(reg, reg_values[reg])
+
+    def getresuid_syscall(self, process: ProcessImage):
+        ruid_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        euid_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        suid_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+
+        # TODO: support more users
+        if ruid_ptr != 0:
+            process.cpu_context.vm.write_int(ruid_ptr, 0)
+        if euid_ptr != 0:
+            process.cpu_context.vm.write_int(euid_ptr, 0)
+        if suid_ptr != 0:
+            process.cpu_context.vm.write_int(suid_ptr, 0)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def getresgid_syscall(self, process: ProcessImage):
+        self.getresuid_syscall(process)
 
     def __unlink_fd(self, process, fd):
         ofo = process.fdt[fd]
@@ -542,6 +566,15 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, len(res))
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def issetugid_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL1, 1)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def readlinkat_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL2, -1)
+
     def sigsuspend_syscall(self, process: ProcessImage):
         # TODO: implement mask
         logging.info("Started waiting for the signal")
@@ -641,6 +674,11 @@ class Kernel:
         # TODO: handle flags
         self.pipe_syscall(process)
 
+    def faccessat_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def fstatat_syscall(self, process: ProcessImage):
         # TODO: add handling CWD
         fd = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
@@ -664,6 +702,16 @@ class Kernel:
         process.cpu_context.reg_write(REG_RET_VAL1, return_val)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
+    def clock_gettime_syscall(self, process: ProcessImage):
+        # TODO: implement it properly
+        timespec_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        process.cpu_context.vm.copy_bytes_in_vm_as_kernel(timespec_ptr, bytes(16))
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def getppid_syscall(self, process: ProcessImage):
+        process.cpu_context.reg_write(REG_RET_VAL1, process.ppid)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def setpgid_syscall(self, process: ProcessImage):
         pid = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         pgrp = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -673,6 +721,15 @@ class Kernel:
         else:
             self.process_table[pid].pgid = pgrp
 
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def getpgid_syscall(self, process: ProcessImage):
+        process.cpu_context.reg_write(REG_RET_VAL1, process.pgid)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def umask_syscall(self, process: ProcessImage):
+        # TODO: implement it
         process.cpu_context.reg_write(REG_RET_VAL1, 0)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
@@ -742,6 +799,31 @@ class Kernel:
         process.cpu_context = cpu_context
         process.command = " ".join(argv)
 
+    def setgroups_syscall(self, process: ProcessImage):
+        # TODO: implement it
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def setsid_syscall(self, process: ProcessImage):
+        # TODO: implement it
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def setuid_syscall(self, process: ProcessImage):
+        # TODO: implement it
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def setgid_syscall(self, process: ProcessImage):
+        # TODO: implement it
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+    def setitimer_syscall(self, process: ProcessImage):
+        # TODO: implement it
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def sigtimedwait_syscall(self, process: ProcessImage):
         # TODO: implement mask, siginfo and timeout
         logging.info("Started waiting for the signal")
@@ -773,15 +855,30 @@ syscall_dict = {
                 17: Kernel.dup2_syscall,
                 18: Kernel.sigaction_syscall,
                 20: Kernel.wait4_syscall,
+                23: Kernel.faccessat_syscall,
                 24: Kernel.fstatat_syscall,
                 25: Kernel.pipe2_syscall,
+                26: Kernel.clock_gettime_syscall,
                 28: Kernel.execve_syscall,
+                29: Kernel.getppid_syscall,
                 30: Kernel.setpgid_syscall,
+                31: Kernel.getpgid_syscall,
+                32: Kernel.umask_syscall,
                 35: Kernel.chdir_syscall,
                 36: Kernel.getcwd_syscall,
+                37: Kernel.sigaltstack_syscall,
                 38: Kernel.sigprocmask_syscall,
                 39: Kernel.setcontext_syscall,
+                41: Kernel.getresuid_syscall,
+                42: Kernel.getresgid_syscall,
+                45: Kernel.issetugid_syscall,
                 46: Kernel.fcntl_syscall,
+                49: Kernel.readlinkat_syscall,
                 55: Kernel.sigsuspend_syscall,
+                59: Kernel.setgroups_syscall,
+                60: Kernel.setsid_syscall,
+                64: Kernel.setuid_syscall,
+                67: Kernel.setgid_syscall,
+                81: Kernel.setitimer_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }
