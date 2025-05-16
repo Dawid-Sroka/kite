@@ -27,7 +27,7 @@ import logging
 
 class Kernel:
 
-    def __init__(self, simulator: Simulator, scheduler: Scheduler):
+    def __init__(self, simulator: Simulator, scheduler: Scheduler, sysroot: str):
         self.simulator = simulator
         self.process_table = {}
         self.scheduler = scheduler
@@ -53,6 +53,7 @@ class Kernel:
 
         sys.excepthook = self.handle_exception
         self.current_process = None
+        self.sysroot = Path(os.getcwd(), sysroot)
         self.cwd = self.sysroot
         self.special_files = {
             self.sysroot / "dev" / "uart": lambda: self.terminal,
@@ -80,9 +81,9 @@ class Kernel:
                 process.signal_set.set_pending(signal)
 
     @classmethod
-    def create(cls, simulator: Simulator):
+    def create(cls, simulator: Simulator, sysroot):
         scheduler = Scheduler()
-        kernel = cls(simulator, scheduler)
+        kernel = cls(simulator, scheduler, sysroot)
         return kernel
 
     def start(self, arguments) -> None:

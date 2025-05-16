@@ -14,14 +14,14 @@ from unicorn.riscv_const import *
 app = typer.Typer(pretty_exceptions_enable=False)
 
 @app.command()
-def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
+def main(argv: List[str], log_to_stdout: bool = False, simulator: str = "unicorn", debug: bool = False, sysroot: str = 'sysroot'):
     if simulator == "pyrisc":
         simulator_obj = PyRISCSimulator()
     elif simulator == "unicorn":
         simulator_obj = UnicornSimulator()
     else:
         raise NotImplementedError(f"{simulator}: simulator not supported")
-    kernel = Kernel.create(simulator_obj)
+    kernel = Kernel.create(simulator_obj, sysroot)
 
     class ContextFilter(logging.Filter):
         """
@@ -45,6 +45,6 @@ def main(path_to_binary: Path, debug: bool = False, simulator: str = "unicorn"):
 
     logging.getLogger().addFilter(ContextFilter())
 
-    kernel.start(path_to_binary)
+    kernel.start(argv)
 
 app()
