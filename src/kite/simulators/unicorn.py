@@ -68,8 +68,17 @@ class UnicornSimulator:
         def hook_print_pc(_uc, addr, _size, _user_data):
             logging.info(f"PC = {addr:#x}")
 
-        cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV32)
         cpu.hook_add(UC_HOOK_CODE, hook_print_pc)
+
+        cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV64)
+
+        # Enable FPU
+
+        current_mstatus = cpu.reg_read(UC_RISCV_REG_MSTATUS)
+        # Set the FS (Floating-Point Status) field to 0b11 (active state)
+        MSTATUS_FS = (3 << 13)
+        cpu.reg_write(UC_RISCV_REG_MSTATUS, current_mstatus | MSTATUS_FS)
+
         cpu.hook_add(UC_HOOK_INTR, hook_intr)
         cpu.hook_add(UC_HOOK_MEM_UNMAPPED, hook_unmapped_mem)
         cpu.hook_add(UC_HOOK_MEM_PROT, hook_protected_mem)
