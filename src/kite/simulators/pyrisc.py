@@ -10,8 +10,8 @@ from pyrisc.sim.components import Register, RegisterFile
 from kite.consts import *
 
 reg_to_pyrisc_reg = {
-    RA: 1,
-    SP: 2,
+    REG_RA: 1,
+    REG_SP: 2,
     REG_SYSCALL_ARG0: 10,
     REG_SYSCALL_ARG1: 11,
     REG_SYSCALL_ARG2: 12,
