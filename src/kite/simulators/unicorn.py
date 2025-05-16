@@ -77,11 +77,12 @@ class UnicornSimulator:
         self.cpu = cpu
         self.event = None
         self.CLOCK_CYCLES = 1000
-        self.vm = VMAreas()
+        self.bitness = 64
+        self.vm = VMAreas(self.bitness)
 
     def get_initial_context(self) -> CPUContext:
         # TODO: clear the context
-        return UnicornContext(self.cpu.context_save(), VMAreas())
+        return UnicornContext(self.cpu.context_save(), VMAreas(self.bitness))
 
     def load_context_into_cpu(self, cpu_context: CPUContext) -> None:
         self.cpu.context_restore(cpu_context.uc_context)

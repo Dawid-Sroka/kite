@@ -54,7 +54,7 @@ class PyRISCContext:
 
 class PyRISCSimulator:
     def __init__(self):
-        self.cpu = CPU(VMAreas())
+        self.cpu = CPU(VMAreas(32))
 
     def load_context_into_cpu(self, context: CPUContext) -> None:
         self.cpu.pc = context.pc
@@ -62,7 +62,7 @@ class PyRISCSimulator:
         self.cpu.mmu.page_table = context.vm
 
     def get_initial_context(self) -> CPUContext:
-        return PyRISCContext(self.cpu.pc, self.cpu.regs, VMAreas())
+        return PyRISCContext(self.cpu.pc, self.cpu.regs, VMAreas(32))
 
     def read_context_from_cpu(self) -> CPUContext:
         return PyRISCContext(self.cpu.pc, self.cpu.regs, self.cpu.mmu.page_table)
