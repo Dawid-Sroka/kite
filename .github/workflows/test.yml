@@ -1,0 +1,42 @@
+name: Test Kite
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      with:
+        submodules: true
+
+    - name: Install requirements
+      run: |
+        sudo apt -q update
+        sudo apt install -y --no-install-recommends gcc-riscv64-linux-gnu expect
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Get Mimiker binaries
+      run: |
+        RELEASE_URL="https://github.com/Dawid-Sroka/kite-binaries-builder/releases/download/v1.0.0/kite-binaries.zip"
+        curl -L -o kite-binaries.zip $RELEASE_URL
+        unzip kite-binaries.zip
+        mv mimiker-sysroot sysroot
+        mkdir -p sysroot/var/run
+
+    - name: Run PyRISC tests
+      run: |
+        (cd programs && make ARCH=rv32)
+        ./test pyrisc
+
+    - name: Run Unicorn tests
+      run: |
+        (cd programs && make ARCH=rv64)
+        ./test unicorn
+        ./tests/init
