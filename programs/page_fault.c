@@ -5,5 +5,5 @@ int main() {
   a = NULL;
   int b = *a;
 
-  _exit();
+  _exit(0);
 }

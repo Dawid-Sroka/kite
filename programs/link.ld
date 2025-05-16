@@ -18,7 +18,7 @@ OUTPUT_ARCH( "riscv" )
 MEMORY
 {
    /* qemu-system-risc64 virt machine */
-   RAM (rwx)  : ORIGIN = 0x80000000, LENGTH = 128M
+   RAM (rwx)  : ORIGIN = 0x7fffff7e0000, LENGTH = 128M
 }
 /* >>> End of our addition. <<< */
 
@@ -26,14 +26,14 @@ ENTRY(_start)
 
 SECTIONS
 {
-  . = 0x80000000;
+  . = 0x7fffff7e0000;
   .text.init : { *(.text.init) }
   . = ALIGN(0x1000);
   .tohost : { *(.tohost) }
   . = ALIGN(0x1000);
   .text : { *(.text) }
-  PROVIDE(__stack_top = 0x80020000);
-  . = 0x80010000;
+  PROVIDE(__stack_top = 0x7ffffffff000);
+  . = 0x7fffff7ff000;
   .data : { *(.data) }
   .bss : { *(.bss) }
   _end = .;

@@ -1,7 +1,7 @@
 #include <unistd.h>
 
 int main() {
-  int fd = open("file.log");
+  int fd = openat(AT_FDCWD, "myfile.txt", O_CREAT | O_WRONLY, 0644);
   write(fd, "message", 8);
-  _exit();
+  _exit(0);
 }

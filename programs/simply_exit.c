@@ -1,5 +1,5 @@
 #include <unistd.h>
 
 int main() {
-  _exit();
+  _exit(0);
 }

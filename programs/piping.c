@@ -3,7 +3,7 @@
 int main() {
 
   int pipefd[2];
-  pipe(pipefd);
+  pipe2(pipefd, 0);
 
   int pid = fork();
 
@@ -24,5 +24,5 @@ int main() {
     write(2, buf, 10);
     write(2, "\n", 1);
   }
-  _exit();
+  _exit(0);
 }
