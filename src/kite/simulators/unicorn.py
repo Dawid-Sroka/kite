@@ -65,10 +65,9 @@ class UnicornSimulator:
             pc = self.reg_read(REG_PC)
             self.event = MemEvent(EXC_PAGE_FAULT_MISS, address, pc)
             return False
-        def hook_print_pc(_uc, addr, _size, _user_data):
-            logging.info(f"PC = {addr:#x}")
 
-        cpu.hook_add(UC_HOOK_CODE, hook_print_pc)
+        def count_instructions(_uc, addr, _size, _user_data):
+            self.instructions_left -= 1
 
         cpu = Uc(UC_ARCH_RISCV, UC_MODE_RISCV64)
 
@@ -79,15 +78,17 @@ class UnicornSimulator:
         MSTATUS_FS = (3 << 13)
         cpu.reg_write(UC_RISCV_REG_MSTATUS, current_mstatus | MSTATUS_FS)
 
+        cpu.hook_add(UC_HOOK_CODE, count_instructions)
         cpu.hook_add(UC_HOOK_INTR, hook_intr)
         cpu.hook_add(UC_HOOK_MEM_UNMAPPED, hook_unmapped_mem)
         cpu.hook_add(UC_HOOK_MEM_PROT, hook_protected_mem)
 
         self.cpu = cpu
         self.event = None
-        self.CLOCK_CYCLES = 1000
+        self.CLOCK_CYCLES = 100000
         self.bitness = 64
         self.vm = VMAreas(self.bitness)
+        self.instructions_left = self.CLOCK_CYCLES
 
     def get_initial_context(self) -> CPUContext:
         # TODO: clear the context
@@ -123,10 +124,13 @@ class UnicornSimulator:
         UC_ERR_FETCH_PROT
     ]
 
+    def reset_instruction_counter(self):
+        self.instructions_left = self.CLOCK_CYCLES
+
     def run(self):
         self.event = Event(EXC_CLOCK)
         try:
-            self.cpu.emu_start(self.cpu.reg_read(UC_RISCV_REG_PC), -1, 0, self.CLOCK_CYCLES)
+            self.cpu.emu_start(self.cpu.reg_read(UC_RISCV_REG_PC), -1, 0, self.instructions_left)
         except UcError as e:
             if e.errno in UnicornSimulator.__allowed_errors:
                 return self.event

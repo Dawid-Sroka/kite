@@ -79,3 +79,7 @@ class PyRISCSimulator:
 
     def reg_write(self, reg, value) -> None:
         reg_write(self.cpu, reg, value)
+
+    # this function is not necessary for PyRISC
+    def reset_instruction_counter(self):
+        pass
