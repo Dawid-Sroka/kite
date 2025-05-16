@@ -9,6 +9,11 @@ class CPUContext(Protocol):
     def reg_write(self, reg, value):
         ...
 
+    # registers must be deep-copied,
+    # memory map should be shared
+    def copy_for_signal_handler(self):
+        ...
+
 class Simulator(Protocol):
     def get_initial_context(self) -> CPUContext:
         ...
