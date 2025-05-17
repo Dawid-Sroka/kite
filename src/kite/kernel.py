@@ -169,10 +169,21 @@ class Kernel:
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
         process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+    def __unlink_fd(self, process, fd):
+        ofo = process.fdt[fd]
+        ofo.ref_cnt -= 1
+        if ofo.ref_cnt == 0 and isinstance(ofo, PipeWriteEnd):
+            ofo.buffer.write_end_closed = True
 
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        self.__unlink_fd(process, fd)
         del process.fdt[fd]
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def lseek_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         offset = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -551,6 +562,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                6:  Kernel.close_syscall,
                 7:  Kernel.lseek_syscall,
                 9:  Kernel.getpid_syscall,
                 10: Kernel.kill_syscall,
