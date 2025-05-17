@@ -5,7 +5,9 @@ from kite.simulators.simulator import Simulator
 from kite.signals import Signal, create_signal_context, SIG_BLOCK, SIG_UNBLOCK, SIG_SETMASK, SIG_DFL, SIG_IGN, default_action, DefaultAction, STATUS_EXITED, STATUS_SIGNALED, STATUS_STOPPED
 
 from kite.consts import *
-from kite.loading import check_elf, parse_cpu_context_from_file
+from kite.loading import parse_cpu_context_from_file
+
+from kite.log_defs import *
 from kite.procstat import procstat_creator
 
 from pathlib import Path
@@ -95,10 +97,11 @@ class Kernel:
         action, resource = result
         return (action, resource.resource)
 
-    def load_process_image_from_file(self, program_file: str) -> ProcessImage:
+    def load_process_image_from_file(self, pid, program_file: str, argv) -> ProcessImage:
         cpu_context = self.simulator.get_initial_context()
-        parse_cpu_context_from_file(cpu_context, program_file)
-        process = ProcessImage(cpu_context)
+        parse_cpu_context_from_file(cpu_context, program_file, argv, [])
+        process = ProcessImage(pid, cpu_context, self.process_routine(pid))
+        process.command = " ".join(argv)
         return process
 
     def react_to_event(self, process: ProcessImage, event: Event) -> None:
