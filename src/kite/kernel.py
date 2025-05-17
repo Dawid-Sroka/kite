@@ -173,6 +173,19 @@ class Kernel:
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
 
+    def sigsuspend_syscall(self, process: ProcessImage):
+        # TODO: implement mask
+        logging.info("Started waiting for the signal")
+        while True:
+            if process.signal_received != -1:
+                process.signal_received = -1
+                logging.info("Received signal during wait")
+                process.cpu_context.reg_write(REG_RET_VAL1, 0)
+                process.cpu_context.reg_write(REG_RET_VAL2, 0)
+                return
+            else:
+                yield ("block", Resource("signal", [child.pid for child in process.children]))
+
     def fcntl_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         cmd = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -386,5 +399,6 @@ syscall_dict = {
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
                 46: Kernel.fcntl_syscall,
+                55: Kernel.sigsuspend_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }
