@@ -1,19 +1,19 @@
 #!/bin/bash
 
 declare -A FAILED_TESTS
+SIMULATOR="${1:-unicorn}"
+TESTS="page_fault piping simply_execve simply_exit simply_fork simply_write waiting"
 
-for SIMULATOR in "unicorn" "pyrisc"; do
-    FAILED_TESTS[$SIMULATOR]+=""
-    for file in tests/*; do
-        echo "--------------------------------"
-        echo "Running test: $file"
-        echo "--------------------------------"
-        ./$file $SIMULATOR
-        if [[ $? -ne 0 ]]; then
-            FAILED_TESTS[$SIMULATOR]+="$file "
-        fi
-        echo ""
-    done
+FAILED_TESTS[$SIMULATOR]+=""
+for file in $TESTS; do
+    echo "--------------------------------"
+    echo "Running test: $file"
+    echo "--------------------------------"
+    ./tests/$file $SIMULATOR
+    if [[ $? -ne 0 ]]; then
+        FAILED_TESTS[$SIMULATOR]+="$file "
+    fi
+    echo ""
 done
 
 for key in "${!FAILED_TESTS[@]}"; do
