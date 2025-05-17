@@ -169,6 +169,37 @@ class Kernel:
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
         process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+    def sigprocmask_syscall(self, process: ProcessImage):
+        how = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        set_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        oset_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+
+        if oset_ptr != 0:
+            oset = 0
+            for signal in Signal:
+                if process.signal_set.is_blocked(signal):
+                    oset |= (1 << signal.value)
+            process.cpu_context.vm.write_int(oset_ptr, oset)
+
+        if set_ptr != 0:
+            if how not in [SIG_BLOCK, SIG_UNBLOCK, SIG_SETMASK]:
+                raise NotImplementedError(f"sigprocmask: {how} - unsupported how argument")
+
+            set = process.cpu_context.vm.read_int(set_ptr)
+            
+            for signal in Signal:
+                signal_bit = 1 << signal.value
+                if set & signal_bit != 0:
+                    if how == SIG_BLOCK or how == SIG_SETMASK:
+                        process.signal_set.set_blocked(signal)
+                    elif how == SIG_UNBLOCK:
+                        process.signal_set.unset_blocked(signal)
+                elif how == SIG_SETMASK:
+                        process.signal_set.unset_blocked(signal)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def setcontext_syscall(self, process: ProcessImage):
         # Currently only general purpose registers are updated
         # TODO: Add support for other fields of ucontext_t
@@ -607,6 +638,7 @@ syscall_dict = {
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
+                38: Kernel.sigprocmask_syscall,
                 39: Kernel.setcontext_syscall,
                 46: Kernel.fcntl_syscall,
                 55: Kernel.sigsuspend_syscall,
