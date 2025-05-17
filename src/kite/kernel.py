@@ -173,6 +173,26 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def lseek_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        offset = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        whence = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+
+        whence_map = {
+            0: os.SEEK_SET,
+            1: os.SEEK_CUR,
+            2: os.SEEK_END
+        }
+
+        if whence not in whence_map:
+            raise NotImplementedError(f"lseek: unsupported whence - {whence}")
+
+        # get the host fd
+        host_fd = process.fdt[fd].fd
+        res = os.lseek(host_fd, offset, whence_map[whence])
+        process.cpu_context.reg_write(REG_RET_VAL1, res)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def getpid_syscall(self, process: ProcessImage):
         process.cpu_context.reg_write(REG_RET_VAL1, process.pid)
         process.cpu_context.reg_write(REG_RET_VAL2, 0)
@@ -531,6 +551,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                7:  Kernel.lseek_syscall,
                 9:  Kernel.getpid_syscall,
                 10: Kernel.kill_syscall,
                 12: Kernel.sbrk_syscall,
