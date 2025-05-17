@@ -265,16 +265,13 @@ class Kernel:
             else:
                 yield ("block", Resource("child state", [child.pid for child in process.children]))
 
-
 syscall_dict = {
-                0:  Kernel.read_syscall,
-                1:  Kernel.write_syscall,
                 2:  Kernel.open_syscall,
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
                 57: Kernel.fork_syscall,
                 59: Kernel.execve_syscall,
-                60: Kernel.exit_syscall,
-                100: Kernel.debug_print,
-                247: Kernel.wait_syscall
+                1: Kernel.exit_syscall,
+                3:  Kernel.read_syscall,
+                4:  Kernel.write_syscall,
                 }
