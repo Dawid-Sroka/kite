@@ -5,22 +5,7 @@ from pyrisc.sim.consts import *
 from kite.consts import VPO_LENTGH, VPO_MASK
 
 import logging
-import mmap
-import copy
-
-#--------------------------------------------------------------------------
-#   Configurations
-#--------------------------------------------------------------------------
-
-# Memory configurations
-#   IMEM: 0x80000000 - 0x8000ffff (64KB)
-#   DMEM: 0x80010000 - 0x8001ffff (64KB)
-
-IMEM_START  = WORD(0x80000000)      # IMEM: 0x80000000 - 0x8000ffff (64KB)
-IMEM_SIZE   = WORD(64 * 1024)
-DMEM_START  = WORD(0x80010000)      # DMEM: 0x80010000 - 0x8001ffff (64KB)
-DMEM_SIZE   = WORD(64 * 1024)
-#--------------------------------------------------------------------------
+from sortedcontainers import SortedList
 
 class PageTableEntry:
     def __init__(self, vpn, prot, physical_page):

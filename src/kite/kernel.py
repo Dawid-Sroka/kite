@@ -10,9 +10,12 @@ from kite.procstat import procstat_creator
 from pathlib import Path
 import inspect
 import os
-from sys import stdin, stdout, stderr
-from copy import deepcopy, copy
-from time import sleep
+from copy import deepcopy
+from kite.struct_definitions import UContext, Sigaction, Stat, Termios, convert_o_flags_netbsd_to_linux
+import signal
+import sys
+import termios
+from getdents import *
 
 from kite.consts import Event, MemEvent
 
@@ -146,16 +149,6 @@ class Kernel:
         parent = self.process_table[process.ppid]
         parent.pending_signals[0] = 1
         yield ("unblock", Resource("child state" , process.pid))
-
-    def get_string_from_memory(self, process: ProcessImage, string_pointer: int):
-        d = ""
-        virt_mem = process.cpu_context.vm
-        c = virt_mem.get_byte(string_pointer)
-        while c != 0:
-            d += chr(c)
-            string_pointer += 1
-            c = virt_mem.get_byte(string_pointer)
-        return d
 
     def open_syscall(self, process: ProcessImage):
         file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
