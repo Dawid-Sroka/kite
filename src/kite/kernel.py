@@ -225,6 +225,16 @@ class Kernel:
         self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+
+        process.cpu_context.vm.write_int(fds_ptr, int(read_fd))
+        process.cpu_context.vm.write_int(fds_ptr + INT_SIZE, int(write_fd))
+
+    def pipe2_syscall(self, process: ProcessImage):
+        # TODO: handle flags
+        self.pipe_syscall(process)
+
     def fstatat_syscall(self, process: ProcessImage):
         # TODO: add handling CWD
         fd = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
@@ -341,13 +351,13 @@ class Kernel:
 
 syscall_dict = {
                 2:  Kernel.open_syscall,
-                22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
                 1: Kernel.exit_syscall,
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
                 24: Kernel.fstatat_syscall,
+                25: Kernel.pipe2_syscall,
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
