@@ -198,8 +198,7 @@ class Kernel:
         count = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
 
         open_file_object = process.fdt[fd]
-        f = open_file_object.file_struct
-        array_of_bytes_to_write = process.cpu_context.vm.load_bytes_from_vm(buff_ptr, count)
+        array_of_bytes_to_write = process.cpu_context.vm.load_bytes_from_vm_as_kernel(buff_ptr, count)
 
         write_method = open_file_object.write
         if inspect.isgeneratorfunction(write_method):
@@ -209,6 +208,7 @@ class Kernel:
 
         no_bytes_written, result = write_result
         process.cpu_context.reg_write(REG_RET_VAL1, no_bytes_written)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
         return result
 
     def pipe_syscall(self, process: ProcessImage):

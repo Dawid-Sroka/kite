@@ -35,9 +35,11 @@ class Resource:
 
 
 class OpenFileObject():
-    def __init__(self, file_name, file_struct):
-        self.file_struct = file_struct
+    def __init__(self, file_name):
         self.file_name = file_name
+        self.ref_cnt = 1
+    def __repr__(self):
+        return f"{self.file_name} ref_cnt={self.ref_cnt}"
 
 
 class TerminalFile(OpenFileObject):
@@ -57,26 +59,17 @@ class TerminalFile(OpenFileObject):
 
 
 class RegularFile(OpenFileObject):
-    def __init__(self, file_name, file_struct):
-        super().__init__(file_name, file_struct)
-        self.ref_cnt = 1
-        self.position = 0
+    def __init__(self, file_name, file_descriptor):
+        super().__init__(file_name)
+        self.fd = file_descriptor
 
     def read(self, no_bytes_to_read):
-        self.file_struct.seek(self.position)
-        chars_read = self.file_struct.read(no_bytes_to_read)
-        self.position += len(chars_read)
-        array_of_bytes_read = [ord(b) for b in chars_read]
-        return (array_of_bytes_read, None)
+        # TODO: let's not use array of bytes, but just bytes
+        chars_read = os.read(self.fd, no_bytes_to_read)
+        return (list(chars_read), None)
 
     def write(self, array_of_bytes_to_write):
-        position = 0
-        self.file_struct.seek(position)
-        string_to_write = ""
-        for i in range(len(array_of_bytes_to_write)):
-            string_to_write += chr(array_of_bytes_to_write[i])
-        no_bytes_written = self.file_struct.write(string_to_write)
-        self.file_struct.flush()
+        no_bytes_written = os.write(self.fd, bytes(array_of_bytes_to_write))
         return (no_bytes_written, None)
 
 class VirtualFile(OpenFileObject):
@@ -103,16 +96,21 @@ class PipeBuffer():
         self.write_position = 0
         self.read_position = 0
         self.unread_count = 0
+        self.write_end_closed = False
 
 class PipeReadEnd(OpenFileObject):
-    def __init__(self, file_name, file_struct):
-        super().__init__(file_name, file_struct)
-        self.ref_cnt = 1
+    def __init__(self, file_name, buffer):
+        super().__init__(file_name)
         self.referenced_by = []
         self.write_end_ptr = None
+        self.buffer = buffer
 
     def read(self, no_bytes_to_read):
-        pipe_buffer = self.file_struct
+        pipe_buffer = self.buffer
+
+        if pipe_buffer.write_end_closed:
+            # NOTE: should it be unblocking?
+            return ([], ("unblock", Resource("I/O", self)))
 
         while pipe_buffer.unread_count == 0:
             logging.info(" # " + "       read blocked! What should happen now?")
@@ -131,14 +129,14 @@ class PipeReadEnd(OpenFileObject):
         return (bytes_read, ("unblock", Resource("I/O", self)))
 
 class PipeWriteEnd(OpenFileObject):
-    def __init__(self, file_name, file_struct):
-        super().__init__(file_name, file_struct)
-        self.ref_cnt = 1
+    def __init__(self, file_name, buffer):
+        super().__init__(file_name)
         self.referenced_by = []
         self.read_end_ptr = None
+        self.buffer = buffer
 
     def write(self, array_of_bytes_to_write):
-        pipe_buffer = self.file_struct
+        pipe_buffer = self.buffer
 
         while pipe_buffer.unread_count == pipe_buffer.buffer_size:
             logging.info(" # " + "       write blocked!")
