@@ -11,7 +11,7 @@ from pathlib import Path
 import inspect
 import os
 from copy import deepcopy
-from kite.struct_definitions import UContext, Sigaction, Stat, Termios, convert_o_flags_netbsd_to_linux
+from kite.struct_definitions import UContext, Sigaction, Stat, Termios, Dirent, convert_o_flags_netbsd_to_linux
 import signal
 import sys
 import termios
@@ -172,6 +172,22 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+
+    def getdents_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        nbytes = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+
+        fd = process.fdt[fd].fd
+
+        res = bytes()
+        for inode, type, name in getdents_raw(fd, nbytes):
+            res += Dirent.pack(inode, type, name)
+
+        process.cpu_context.vm.copy_bytes_in_vm_as_kernel(buff_ptr, res)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, len(res))
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
     def sigsuspend_syscall(self, process: ProcessImage):
         # TODO: implement mask
@@ -393,6 +409,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                15: Kernel.getdents_syscall,
                 24: Kernel.fstatat_syscall,
                 25: Kernel.pipe2_syscall,
                 28: Kernel.execve_syscall,
