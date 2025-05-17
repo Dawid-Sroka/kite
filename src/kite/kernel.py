@@ -163,12 +163,32 @@ class Kernel:
         process.fdt[fd] = ofo
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
+    def dup2_syscall(self, process: ProcessImage):
+        oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        newfd = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        if newfd in process.fdt:
+            process.fdt[newfd].ref_cnt -= 1
+            del process.fdt[newfd]
+
+        process.fdt[oldfd].ref_cnt += 1
+
+        process.fdt[newfd] = process.fdt[oldfd]
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+        process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
     def dup_syscall(self, process: ProcessImage):
         oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
+        process.fdt[newfd].ref_cnt += 1
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
         process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def getcwd_syscall(self, process: ProcessImage):
         buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         size = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -631,7 +651,6 @@ class Kernel:
 
 syscall_dict = {
                 2:  Kernel.open_syscall,
-                32: Kernel.dup_syscall,
                 1: Kernel.exit_syscall,
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
@@ -643,6 +662,8 @@ syscall_dict = {
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
+                16: Kernel.dup_syscall,
+                17: Kernel.dup2_syscall,
                 18: Kernel.sigaction_syscall,
                 20: Kernel.wait4_syscall,
                 24: Kernel.fstatat_syscall,

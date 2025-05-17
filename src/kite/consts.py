@@ -139,6 +139,8 @@ syscall_names = {
                 12: "sbrk",
                 13: "mmap",
                 15: "getdents",
+                16: "dup",
+                17: "dup2",
                 18: "sigaction",
                 20: "wait4",
                 25: "pipe2",
