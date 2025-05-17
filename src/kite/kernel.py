@@ -230,17 +230,25 @@ class Kernel:
         process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
 
     def fork_syscall(self, process: ProcessImage):
+        # TODO: do we want to copy whole context stack?
         child_cpu_context = deepcopy(process.cpu_context)
-        child = ProcessImage(child_cpu_context)
+        child_pid = self.get_pid()
+        child = ProcessImage(child_pid, child_cpu_context, self.process_routine(child_pid))
         child.copy_fdt(process)
-        child_pid = self.add_new_process(child)
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+        self.process_table[child_pid] = child
         child.ppid = process.pid
+        child.pgid = process.pgid
+        child.signal_set = deepcopy(process.signal_set)
+        child.sigactions = deepcopy(process.sigactions)
         process.children.append(child)
 
         process.cpu_context.reg_write(REG_RET_VAL1, child_pid)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
         child.cpu_context.reg_write(REG_RET_VAL1, 0)
-        child_process = self.process_routine(child_pid)
-        self.scheduler.enqueue_process((child_pid, child_process))
+        child.cpu_context.reg_write(REG_RET_VAL2, 0)
+        self.scheduler.enqueue_process(child)
 
 
     def execve_syscall(self, process: ProcessImage):
@@ -291,8 +299,8 @@ syscall_dict = {
                 2:  Kernel.open_syscall,
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
-                57: Kernel.fork_syscall,
                 1: Kernel.exit_syscall,
+                2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
                 28: Kernel.execve_syscall,

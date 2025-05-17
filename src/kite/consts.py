@@ -127,8 +127,8 @@ EXC_MSG = {
 
 syscall_names = {
                 2:  "open",
-                57: "fork",
                 1: "exit",
+                2:  "fork",
                 3:  "read",
                 4:  "write",
                 11: "fstat",
