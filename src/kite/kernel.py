@@ -225,6 +225,29 @@ class Kernel:
         self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
+    def fstatat_syscall(self, process: ProcessImage):
+        # TODO: add handling CWD
+        fd = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        if fd != AT_FDCWD:
+            raise NotImplementedError("Only AT_FDCWD value for file descriptor is supported")
+
+        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        path = process.cpu_context.vm.read_string(file_name_pointer)
+        path = self.__modify_sysroot_path(path)
+
+        return_val = -1
+        if path and os.path.isfile(path) or os.path.isdir(path):
+            return_val = 0
+
+            # TODO: do we really want to pass all host values?
+            stat_info = os.stat(path)
+            stat_bytes = Stat.pack(stat_info)
+            statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+            process.cpu_context.vm.copy_bytes_in_vm_as_kernel(statbuf_ptr, stat_bytes)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, return_val)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def setpgid_syscall(self, process: ProcessImage):
         pid = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         pgrp = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -324,6 +347,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                24: Kernel.fstatat_syscall,
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
