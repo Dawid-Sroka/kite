@@ -257,13 +257,18 @@ class Kernel:
         logging.info(f"{hex(value)}")
 
     def wait_syscall(self, process: ProcessImage):
+    def sigtimedwait_syscall(self, process: ProcessImage):
+        # TODO: implement mask, siginfo and timeout
+        logging.info("Started waiting for the signal")
         while True:
-            if process.pending_signals[0] == 1:
-                logging.info(" My child terminated!")
-                process.pending_signals[0] == 0
+            if process.signal_received != -1:
+                logging.info("Received signal during wait")
+                process.cpu_context.reg_write(REG_RET_VAL1, process.signal_received)
+                process.cpu_context.reg_write(REG_RET_VAL2, 0)
+                process.signal_received = -1
                 return
             else:
-                yield ("block", Resource("child state", [child.pid for child in process.children]))
+                yield ("block", Resource("signal", [child.pid for child in process.children]))
 
 syscall_dict = {
                 2:  Kernel.open_syscall,
@@ -274,4 +279,5 @@ syscall_dict = {
                 1: Kernel.exit_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                86: Kernel.sigtimedwait_syscall,
                 }
