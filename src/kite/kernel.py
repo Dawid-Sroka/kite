@@ -225,9 +225,18 @@ class Kernel:
         self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
+    def chdir_syscall(self, process: ProcessImage):
+        path_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        path = process.cpu_context.vm.read_string(path_ptr)
 
-        process.cpu_context.vm.copy_byte_in_vm(fds_ptr, read_fd)
-        process.cpu_context.vm.copy_byte_in_vm(fds_ptr + INT_SIZE, write_fd)
+        host_path = self.__modify_sysroot_path(path)
+        ret = -1
+        if host_path and os.path.exists(host_path):
+            ret = 0
+            self.cwd = host_path
+
+        process.cpu_context.reg_write(REG_RET_VAL1, ret)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
 
     def fork_syscall(self, process: ProcessImage):
         # TODO: do we want to copy whole context stack?
@@ -304,5 +313,6 @@ syscall_dict = {
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
                 28: Kernel.execve_syscall,
+                35: Kernel.chdir_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }

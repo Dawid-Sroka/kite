@@ -134,6 +134,7 @@ syscall_names = {
                 11: "fstat",
                 25: "pipe2",
                 28: "execve",
+                35: "chdir",
                 86: "sigtimedwait",
                 100: "debug print",
                 247: "wait"
