@@ -134,6 +134,7 @@ syscall_names = {
                 11: "fstat",
                 13: "mmap",
                 15: "getdents",
+                20: "wait4",
                 25: "pipe2",
                 28: "execve",
                 30: "setpgid",
@@ -162,6 +163,10 @@ VPN_MASK = 2**32 - 1 - VPO_MASK
 
 MMAP_SEGMENTS_RANGE_START = 0x300000000000
 MMAP_SEGMENTS_RANGE_END = 0x400000000000
+
+# wait4
+WNOHANG = 1
+WUNTRACED = 2
 
 # fcntl
 F_DUPFD = 0

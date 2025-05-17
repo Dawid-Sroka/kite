@@ -172,6 +172,38 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def wait4_syscall(self, process: ProcessImage):
+        pid = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        status_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        options = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+        rusage = process.cpu_context.reg_read(REG_SYSCALL_ARG3)
+
+        if rusage != 0:
+            raise NotImplementedError("wait4: rusage: Currently only NULL value is supported")
+
+        if options != WNOHANG | WUNTRACED:
+            raise NotImplementedError("wait4: options: Currently only WNOHANG|WUNTRACED value is supported")
+
+        if pid != -1:
+            raise NotImplementedError("wait4: pid: Currently only -1 value is supported")
+        
+        ret_val = 0
+        status = 0
+        if len(process.zombies) > 0:
+            zombie_process, status = process.zombies.pop()
+            ret_val = zombie_process.pid
+        # No zombies? Check for stopped processes
+        elif len(self.scheduler.unreported_stopped_processes) > 0:
+            stopped_process = self.scheduler.unreported_stopped_processes.pop()
+            self.scheduler.reported_stopped_processes.append(stopped_process)
+            ret_val = stopped_process.pid
+            # currently we support only SIGTSTP for stopping
+            status = STATUS_STOPPED(Signal.SIGTSTP)
+
+        process.cpu_context.vm.write_int(status_ptr, status)
+        process.cpu_context.reg_write(REG_RET_VAL1, ret_val)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
 
     def mmap_syscall(self, process: ProcessImage):
         # TODO: at list throw for not supported flags
@@ -441,6 +473,7 @@ syscall_dict = {
                 4:  Kernel.write_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
+                20: Kernel.wait4_syscall,
                 24: Kernel.fstatat_syscall,
                 25: Kernel.pipe2_syscall,
                 28: Kernel.execve_syscall,
