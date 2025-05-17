@@ -5,6 +5,7 @@ from kite.simulators.simulator import Simulator
 
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
+from kite.procstat import procstat_creator
 
 from pathlib import Path
 import inspect

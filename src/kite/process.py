@@ -79,6 +79,23 @@ class RegularFile(OpenFileObject):
         self.file_struct.flush()
         return (no_bytes_written, None)
 
+class VirtualFile(OpenFileObject):
+    def __init__(self, file_name, data):
+        super().__init__(file_name)
+        self.data = data
+        self.position = 0
+
+    def read(self, no_bytes_to_read):
+        # TODO: let's not use array of bytes, but just bytes
+        no_bytes_read = min(len(self.data) - self.position, no_bytes_to_read)
+        chars_read = self.data[self.position:self.position + no_bytes_read]
+        self.position += no_bytes_read
+        return (list(chars_read.encode()), None)
+
+    def write(self, array_of_bytes_to_write):
+        # TODO: is ignoring a good solution?
+        return (len(array_of_bytes_to_write), None)
+
 class PipeBuffer():
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
