@@ -1,4 +1,5 @@
 from kite.consts import *
+import copy
 
 from pyrisc.sim.consts import *
 from kite.consts import VPO_LENTGH, VPO_MASK
@@ -38,6 +39,21 @@ class VMAreaStruct:
         self.vm_prot = area_prot
         self.vm_flags = area_flags
         self.data = data
+
+    def __deepcopy__(self, memo):
+        copied_obj = VMAreaStruct.__new__(VMAreaStruct)
+        memo[id(self)] = copied_obj
+
+        copied_obj.start_vpn = copy.deepcopy(self.start_vpn, memo)
+        copied_obj.page_cnt = copy.deepcopy(self.page_cnt, memo)
+        copied_obj.vm_prot = copy.deepcopy(self.vm_prot, memo)
+        copied_obj.vm_flags = copy.deepcopy(self.vm_flags, memo)
+        copied_obj.data = copy.deepcopy(self.data, memo)
+
+        # Do not copy mapped pages
+        copied_obj.mapped_pages = {}
+
+        return copied_obj
 
     def get_page(self, vpn) -> PageTableEntry:
         if vpn in self.mapped_pages.keys():
