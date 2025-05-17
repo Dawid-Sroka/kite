@@ -44,15 +44,16 @@ class Kernel:
         kernel = cls(simulator, scheduler)
         return kernel
 
-    def start(self, init_program: str) -> None:
-        init_image = self.load_process_image_from_file(init_program)
-        init_image.pid = 1
         init_image.fdt = {0: TerminalFile("stdin", stdin),
                           1: TerminalFile("stdout", stdout),
                           2: TerminalFile("stderr", stderr)}
+    def start(self, arguments) -> None:
+        # Create var directory
+        (self.sysroot / 'var' / 'run').mkdir(parents=True, exist_ok=True)
+
+        init_image = self.load_process_image_from_file(1, arguments[0], arguments)
         self.process_table[1] = init_image
-        init_process = self.process_routine(1)
-        self.scheduler.enqueue_process((init_image.pid, init_process))
+        self.scheduler.enqueue_process(init_image)
 
         while True:
             process_entry = self.scheduler.get_process_entry()

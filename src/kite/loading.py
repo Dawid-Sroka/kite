@@ -59,6 +59,22 @@ def parse_cpu_context_from_file(cpu_context, program_file: str, argv, env):
     cpu_context.vm.initial_brk = initial_brk
     cpu_context.vm.brk = initial_brk
 
+    # Setup argc, argv and envp
+    argc_addr = stack_pointer_initial_value
+    argv_addr = stack_pointer_initial_value + 8
+    env_addr = argv_addr + (8 * (len(argv) + 1))
+    cpu_context.vm.write_int(argc_addr, len(argv))
+
+    value_addr = argv_addr + (8 * (len(argv) + len(env))) + 16
+    for i, arg in enumerate(argv):
+        cpu_context.vm.write_string(value_addr, arg)
+        cpu_context.vm.write_long(argv_addr + (i * 8), value_addr)
+        value_addr += len(arg) + 1
+
+    for i, env in enumerate(env):
+        cpu_context.vm.write_string(value_addr, env)
+        cpu_context.vm.write_long(env_addr + (i * 8), value_addr)
+        value_addr += len(env) + 1
 
 def check_elf(header):
         e_ident = header['e_ident']
