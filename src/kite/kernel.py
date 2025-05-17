@@ -173,6 +173,23 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def kill_syscall(self, process: ProcessImage):
+        pid = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        signal = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG1))
+
+        if pid > 0:
+            self.process_table[pid].signal_set.set_pending(Signal(signal))
+        elif pid < 0 and pid != -1:
+            pgid = -pid
+            for target_process in self.process_table.values():
+                if target_process.pgid == pgid:
+                    target_process.signal_set.set_pending(Signal(signal))
+        else:
+            raise NotImplementedError(f"kill: {pid} pid is not implemented")
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def sbrk_syscall(self, process: ProcessImage):
         increment = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         brk = process.cpu_context.vm.brk
@@ -510,6 +527,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                10: Kernel.kill_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,

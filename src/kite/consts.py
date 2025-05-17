@@ -131,6 +131,7 @@ syscall_names = {
                 2:  "fork",
                 3:  "read",
                 4:  "write",
+                10: "kill",
                 11: "fstat",
                 12: "sbrk",
                 13: "mmap",
