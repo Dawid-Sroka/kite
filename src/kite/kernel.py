@@ -173,6 +173,36 @@ class Kernel:
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
 
+    def mmap_syscall(self, process: ProcessImage):
+        # TODO: at list throw for not supported flags
+        size = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        # Find free space
+        # in [MMAP_SEGMENTS_RANGE_START, MMAP_SEGMENTS_RANGE_END]
+        vm_areas_list = process.cpu_context.vm.vm_areas_list
+        prev_addr = 0
+        addr = -1
+        for area in vm_areas_list:
+            area_offset_start = area.start_vpn << VPO_LENTGH
+            area_offset_end = area_offset_start + (area.page_cnt << VPO_LENTGH)
+
+            if prev_addr > MMAP_SEGMENTS_RANGE_END:
+                break
+
+            prev_addr = max(prev_addr, MMAP_SEGMENTS_RANGE_START)
+            if min(area_offset_start, MMAP_SEGMENTS_RANGE_END) - prev_addr > size:
+                addr = prev_addr
+                break
+            prev_addr = area_offset_end
+
+        if addr == -1:
+            raise NotImplementedError("mmap: no more space")
+
+        vm_areas_list.add(VMAreaStruct(addr, size, M_READ_WRITE, 0, bytearray(size)))
+
+        process.cpu_context.reg_write(REG_RET_VAL1, addr)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def getdents_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -409,6 +439,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
                 24: Kernel.fstatat_syscall,
                 25: Kernel.pipe2_syscall,

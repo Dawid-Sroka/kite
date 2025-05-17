@@ -132,6 +132,7 @@ syscall_names = {
                 3:  "read",
                 4:  "write",
                 11: "fstat",
+                13: "mmap",
                 15: "getdents",
                 25: "pipe2",
                 28: "execve",
@@ -158,6 +159,10 @@ VPO_LENTGH = 12
 PAGE_SIZE = 2 ** VPO_LENTGH
 VPO_MASK = 2**VPO_LENTGH - 1
 VPN_MASK = 2**32 - 1 - VPO_MASK
+
+MMAP_SEGMENTS_RANGE_START = 0x300000000000
+MMAP_SEGMENTS_RANGE_END = 0x400000000000
+
 # fcntl
 F_DUPFD = 0
 F_GETFL = 3
