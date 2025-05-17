@@ -169,6 +169,18 @@ class Kernel:
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
         process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+    def getcwd_syscall(self, process: ProcessImage):
+        buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        size = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        cwd = str(Path('/') / self.cwd.relative_to(self.sysroot))
+        if len(cwd) > size:
+            raise NotImplementedError("buffer size too small!")
+        process.cpu_context.vm.write_string(buff_ptr, cwd)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def sigprocmask_syscall(self, process: ProcessImage):
         how = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         set_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -638,6 +650,7 @@ syscall_dict = {
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
+                36: Kernel.getcwd_syscall,
                 38: Kernel.sigprocmask_syscall,
                 39: Kernel.setcontext_syscall,
                 46: Kernel.fcntl_syscall,
