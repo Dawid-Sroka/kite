@@ -1,5 +1,9 @@
 pyelftools==0.29
 typer==0.12.4
 unicorn==2.1.1
+udbserver==0.2.0
+sortedcontainers==2.4.0
+getdents==0.4.1
+pexpect==4.9.0
 -e ./pyrisc
 -e .
