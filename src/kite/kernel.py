@@ -225,6 +225,18 @@ class Kernel:
         self.open_files_table.append(write_ofo)
         process.fdt[read_fd] = read_ofo
         process.fdt[write_fd] = write_ofo
+    def setpgid_syscall(self, process: ProcessImage):
+        pid = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        pgrp = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        if pid == 0:
+            process.pgid = pgrp
+        else:
+            self.process_table[pid].pgid = pgrp
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def chdir_syscall(self, process: ProcessImage):
         path_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         path = process.cpu_context.vm.read_string(path_ptr)
@@ -313,6 +325,7 @@ syscall_dict = {
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
                 28: Kernel.execve_syscall,
+                30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }
