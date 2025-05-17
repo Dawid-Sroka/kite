@@ -128,12 +128,12 @@ EXC_MSG = {
 syscall_names = {
                 2:  "open",
                 57: "fork",
-                59: "execve",
                 1: "exit",
                 3:  "read",
                 4:  "write",
                 11: "fstat",
                 25: "pipe2",
+                28: "execve",
                 86: "sigtimedwait",
                 100: "debug print",
                 247: "wait"

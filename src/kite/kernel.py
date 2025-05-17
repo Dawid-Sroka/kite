@@ -244,19 +244,36 @@ class Kernel:
 
 
     def execve_syscall(self, process: ProcessImage):
-        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
-        file_name = self.get_string_from_memory(process, file_name_pointer)
-        logging.info(f" execve file_name: {file_name}")
-        path = Path(__file__).parents[2] / "binaries" / file_name
+        # TODO: handle close on exec
+        kernel_path_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        kernel_path = process.cpu_context.vm.read_string(kernel_path_pointer)
+        argv_addr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        envp_addr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+        argv = process.cpu_context.vm.read_string_list(argv_addr)
+        env = process.cpu_context.vm.read_string_list(envp_addr)
         cpu_context = self.simulator.get_initial_context()
-        new_context = parse_cpu_context_from_file(cpu_context, path)
-        process.cpu_context = new_context
+        host_path = self.__modify_sysroot_path(kernel_path)
+        if not host_path:
+            raise NotImplementedError(f"execve: path {host_path} doesn't exist")
 
-    def debug_print(self, process: ProcessImage):
-        value = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
-        logging.info(f"{hex(value)}")
+        # the file might be binary script
+        with open(host_path, 'rb') as f:
+            first_bytes = f.read(2)
+            if first_bytes == b'#!':
+                interpreter_line = f.readline().decode('utf-8').strip()
+                # TODO: what about other arguments?
+                interpreter = interpreter_line.split()
+                host_path = self.__modify_sysroot_path(interpreter[0])
+                # when running shell script, first argument should be interpreter,
+                # second should be replaced with actual file name (e.g. /bin/ps instead of ps)
+                argv = interpreter + [kernel_path] + argv[1:]
 
-    def wait_syscall(self, process: ProcessImage):
+        logging.info(f" execve file_name: {kernel_path}")
+        logging.info(f" on host it is file: {host_path}")
+        parse_cpu_context_from_file(cpu_context, host_path, argv, env)
+        process.cpu_context = cpu_context
+        process.command = " ".join(argv)
+
     def sigtimedwait_syscall(self, process: ProcessImage):
         # TODO: implement mask, siginfo and timeout
         logging.info("Started waiting for the signal")
@@ -275,9 +292,9 @@ syscall_dict = {
                 22: Kernel.pipe_syscall,
                 32: Kernel.dup_syscall,
                 57: Kernel.fork_syscall,
-                59: Kernel.execve_syscall,
                 1: Kernel.exit_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                28: Kernel.execve_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }
