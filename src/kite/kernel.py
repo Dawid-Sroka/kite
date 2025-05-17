@@ -30,6 +30,11 @@ class Kernel:
         self.process_table = {}
         self.scheduler = scheduler
         self.open_files_table = []
+        self.special_files = {
+            self.sysroot / "dev" / "uart": lambda: self.terminal,
+            self.sysroot / "dev" / "tty": lambda: self.terminal,
+            self.sysroot / "dev" / "procstat": lambda: procstat_creator(self)
+        }
 
     @classmethod
     def create(cls, simulator: Simulator):
@@ -151,18 +156,47 @@ class Kernel:
         parent.pending_signals[0] = 1
         yield ("unblock", Resource("child state" , process.pid))
 
-    def open_syscall(self, process: ProcessImage):
-        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
-        file_name = self.get_string_from_memory(process, file_name_pointer)
-        logging.info(f"       open file_name: {file_name}")
+    def __modify_sysroot_path(self, path):
+        if os.path.isabs(path):
+            # Substitute the prefix in the absolute path
+            return Path(os.path.join(self.sysroot, os.path.relpath(path, os.path.sep)))
+        else:
+            candidate = (self.cwd / path).resolve()
+            if self.sysroot in candidate.parents or candidate == self.sysroot:
+                return self.cwd / path
+            return None
+
+    def openat_syscall(self, process: ProcessImage):
+        fd = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        if fd != AT_FDCWD:
+            raise NotImplementedError("Only AT_FDCWD value for file descriptor is supported")
+        file_name_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        flags = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+        path = process.cpu_context.vm.read_string(file_name_pointer)
+        path = self.__modify_sysroot_path(path)
+        logging.info(f"       open file_name: {path}")
         fd = max(process.fdt.keys()) + 1
-        path = Path(__file__).parents[2] / "binaries" / file_name
-        f = open(path, 'a+')
-        ofo = RegularFile(file_name, f)
-        self.open_files_table.append(ofo)
-        process.fdt[fd] = ofo
-        process.cpu_context.reg_write(REG_RET_VAL1, fd)
-        logging.info(f"{process.fdt}")
+        if path in self.special_files.keys():
+            process.fdt[fd] = self.special_files[path]()
+            if LOG_FD_CHANGES:
+                logging.info(process.fdt)
+            process.cpu_context.reg_write(REG_RET_VAL1, fd)
+            process.cpu_context.reg_write(REG_RET_VAL2, 0)
+        elif os.path.exists(path) or flags & O_CREAT:
+            oflags = convert_o_flags_netbsd_to_linux(flags)
+            fd = os.open(path, oflags)
+            ofo = RegularFile(path, fd)
+            self.open_files_table.append(ofo)
+            process.fdt[fd] = ofo
+            if LOG_FD_CHANGES:
+                logging.info(process.fdt)
+            process.cpu_context.reg_write(REG_RET_VAL1, fd)
+            process.cpu_context.reg_write(REG_RET_VAL2, 0)
+            logging.info(f"{process.fdt}")
+        else:
+            process.cpu_context.reg_write(REG_RET_VAL1, -1)
+            process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def fstat_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -669,11 +703,11 @@ class Kernel:
                 yield ("block", Resource("signal", [child.pid for child in process.children]))
 
 syscall_dict = {
-                2:  Kernel.open_syscall,
                 1: Kernel.exit_syscall,
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                5:  Kernel.openat_syscall,
                 6:  Kernel.close_syscall,
                 7:  Kernel.lseek_syscall,
                 9:  Kernel.getpid_syscall,

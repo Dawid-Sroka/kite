@@ -126,11 +126,11 @@ EXC_MSG = {
 #--------------------------------------------------------------------------
 
 syscall_names = {
-                2:  "open",
                 1: "exit",
                 2:  "fork",
                 3:  "read",
                 4:  "write",
+                5:  "openat",
                 6:  "close",
                 7:  "lseek",
                 9:  "getpid",
@@ -175,6 +175,10 @@ VPN_MASK = 2**32 - 1 - VPO_MASK
 
 MMAP_SEGMENTS_RANGE_START = 0x300000000000
 MMAP_SEGMENTS_RANGE_END = 0x400000000000
+
+# openat
+AT_FDCWD = -100
+O_CREAT = 0x200
 
 # wait4
 WNOHANG = 1
