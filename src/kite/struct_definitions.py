@@ -1,3 +1,33 @@
+import struct
+import termios
+from kite.consts import USHORT, O_CREAT
+import os
+
+class UContext:
+    FORMAT = "Q Q I 24s 35Q 33Q 64s"
+    SIZE = 656
+
+    @staticmethod
+    def pack(gregs, fregs):
+        return struct.pack(
+            UContext.FORMAT,
+            0,
+            0,
+            0,
+            bytes(24),
+            *gregs,
+            *fregs,
+            bytes(64)
+        )
+
+    @staticmethod
+    def unpack(binary_data):
+        unpacked_data = struct.unpack(UContext.FORMAT, binary_data)
+        return {
+            "gregs": unpacked_data[4:39],
+            "fregs": unpacked_data[39:72],
+        }
+
 class Sigaction:
     FORMAT = "Q I I"
     SIZE = 16

@@ -145,6 +145,7 @@ syscall_names = {
                 28: "execve",
                 30: "setpgid",
                 35: "chdir",
+                39: "setcontext",
                 46: "fcntl",
                 55: "sigsuspend",
                 86: "sigtimedwait",

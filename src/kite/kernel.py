@@ -169,6 +169,37 @@ class Kernel:
         newfd = max(process.fdt.keys()) + 1
         process.fdt[newfd] = process.fdt[oldfd]
         process.cpu_context.reg_write(REG_RET_VAL1, newfd)
+    def setcontext_syscall(self, process: ProcessImage):
+        # Currently only general purpose registers are updated
+        # TODO: Add support for other fields of ucontext_t
+        statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        regs_to_update = [
+                REG_RV,
+                REG_RA,
+                REG_SP,
+                REG_GP,
+                REG_TP,
+                REG_S0,
+                REG_S1,
+                REG_S2,
+                REG_S3,
+                REG_S4,
+                REG_S5,
+                REG_S6,
+                REG_S7,
+                REG_S8,
+                REG_S9,
+                REG_S10,
+                REG_S11,
+                REG_PC,
+        ]
+
+        data = process.cpu_context.vm.load_bytes_from_vm_as_kernel(statbuf_ptr, UContext.SIZE)
+        reg_values = UContext.unpack(bytes(data))["gregs"]
+
+        for reg in regs_to_update:
+            process.cpu_context.reg_write(reg, reg_values[reg])
+
     def __unlink_fd(self, process, fd):
         ofo = process.fdt[fd]
         ofo.ref_cnt -= 1
@@ -576,6 +607,7 @@ syscall_dict = {
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
+                39: Kernel.setcontext_syscall,
                 46: Kernel.fcntl_syscall,
                 55: Kernel.sigsuspend_syscall,
                 86: Kernel.sigtimedwait_syscall,
