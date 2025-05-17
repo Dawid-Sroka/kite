@@ -56,7 +56,10 @@ class Kernel:
         self.scheduler.enqueue_process(init_image)
 
         while True:
+            self.scheduler.resume_continued_processes()
+
             process_entry = self.scheduler.get_process_entry()
+            self.current_process = process_entry
             logging.info(f"ready {self.scheduler.dump_ready_queue()}")
             logging.info(f"blocked {self.scheduler.dump_blocked_queue()}")
             if process_entry is None:
@@ -64,8 +67,40 @@ class Kernel:
                 logging.info("No more processes!")
                 break
 
-            pid, process_routine = process_entry
-            # check pending signals mask
+            pid = process_entry.pid
+
+            # if some signal is pending, handle it
+            # TODO: handle ignoring and blocking signals
+            pending_sig = process_entry.signal_set.get_any()
+
+            if pending_sig:
+                process_entry.signal_set.unset_pending(pending_sig)
+                logging.info(f'entering signal handler for {pending_sig}')
+                sigaction = process_entry.sigactions[pending_sig.value]
+                process_entry.signal_received = pending_sig.value
+                if sigaction["handler"] == SIG_IGN:
+                    pass
+                elif sigaction["handler"] == SIG_DFL:
+                    action = default_action[pending_sig]
+                    if action == DefaultAction.Term:
+                        self.__exit(process_entry, STATUS_SIGNALED(pending_sig))
+                        self.scheduler.update_processes_states(None, None)
+                        continue
+                    elif action == DefaultAction.Stop:
+                        self.scheduler.stop_process()
+                        parent = self.process_table[process_entry.ppid]
+                        # TODO: do that only WUNTRACED
+                        parent.signal_set.set_pending(Signal.SIGCHLD)
+                        self.scheduler.update_processes_states(None, None)
+                        continue
+                    elif action == DefaultAction.Ign:
+                        pass
+                    else:
+                        raise NotImplementedError(f"{action} for {signal} is not implemented")
+                else:
+                    new_context = create_signal_context(pending_sig, sigaction, process_entry.cpu_context)
+                    process_entry.push_subroutine(new_context, self.process_routine(process_entry.pid))
+
             logging.info(f"scheduling proces with PID {pid}")
             self.simulator.reset_instruction_counter()
             result = next(process_entry.process_routine)
@@ -86,7 +121,6 @@ class Kernel:
         process = self.process_table[pid]
         # event loop
         while True:
-            # check signals mask
             self.simulator.load_context_into_cpu(process.cpu_context)
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
@@ -122,16 +156,20 @@ class Kernel:
             logging.info(f"       fault_addr: {hex(fault_addr)}")
             logging.info(f"       fault_pc: {hex(process.cpu_context.reg_read(REG_PC))}")
             if event_t == EXC_PAGE_FAULT_PERMS:
-                logging.info(" SIGSEGV")
-                #process.pending_signals[SIGSEGV] = 1
-                raise NotImplementedError
+                process.signal_set.set_pending(Signal.SIGSEGV)
+                yield None
             elif event_t == EXC_PAGE_FAULT_MISS:
                 area = process.cpu_context.vm.get_area_by_va(fault_addr)
                 if area is not None:
                     process.cpu_context.vm.add_page_containing_addr(fault_addr)
+                elif fault_addr == SIGNAL_RETURN_ADDRESS:
+                    # it means signal handler returned, restore previous context
+                    # TODO: maybe we want to unset pending mask here?
+                    process.pop_subroutine()
+                    yield None
                 else:
-                    logging.info(" SIGSEGV")
-                    raise NotImplementedError
+                    process.signal_set.set_pending(Signal.SIGSEGV)
+                    yield None
             else:
                 raise NotImplementedError
         else:

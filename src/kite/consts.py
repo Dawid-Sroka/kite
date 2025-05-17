@@ -84,6 +84,8 @@ REG_SYSCALL_NUMBER      = REG_A7
 REG_RET_VAL1            = REG_A0
 REG_RET_VAL2            = REG_A1
 
+# signal handlers will jump to this address when returning
+SIGNAL_RETURN_ADDRESS = 0x100
 
 #--------------------------------------------------------------------------
 #   Data types

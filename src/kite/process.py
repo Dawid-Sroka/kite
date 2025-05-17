@@ -1,21 +1,52 @@
 from kite.simulators.simulator import CPUContext
 import logging
-
+from kite.signals import Signal, SignalSet, SIGNAL_NUM, SIG_DFL
+import sys
+from sys import stdout
+import os
+import select
 
 class ProcessImage:
-    def __init__(self, cpu_context: CPUContext):
-        self.cpu_context = cpu_context
-        self.pid = -1
-        self.ppid = -1
+    def __init__(self, pid, cpu_context: CPUContext, process_routine):
+        # process context and all signal contexts
+        self.subroutine_stack = [[cpu_context, process_routine]]
+        self.pid = pid
+        self.ppid = 0
+        self.pgid = 1
         self.children = []
         self.fdt = {}
-        self.pending_signals = [0]
+        self.signal_set = SignalSet()
+        self.sigactions = [{"handler": SIG_DFL}] * SIGNAL_NUM
+        self.zombies = []
+        self.signal_received = -1
+        self.command = ""
+
+    @property
+    def process_routine(self):
+        return self.subroutine_stack[-1][1]
+
+    @process_routine.setter
+    def process_routine(self, process_routine):
+        self.subroutine_stack[-1][1] = process_routine
+
+    @property
+    def cpu_context(self):
+        return self.subroutine_stack[-1][0]
+
+    @cpu_context.setter
+    def cpu_context(self, context):
+        self.subroutine_stack[-1][0] = context
+
+    def push_subroutine(self, cpu_context, process_routine):
+        self.subroutine_stack.append([cpu_context, process_routine])
+
+    def pop_subroutine(self):
+        self.subroutine_stack.pop()
 
     def copy_fdt(self, source_process):
         for k,v in source_process.fdt.items():
             self.fdt[k] = v
-            if hasattr(v, "ref_cnt"):
-                v.ref_cnt += 1
+            v.ref_cnt += 1
 
 
 class ProcessTable:
