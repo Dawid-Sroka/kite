@@ -7,12 +7,24 @@ class Scheduler:
     def __init__(self):
         self.ready_queue = []
         self.blocked_queue = []
+        self.unreported_stopped_processes = deque()
+        self.reported_stopped_processes = deque()
+
+    @property
+    def stopped_processes(self):
+        res = deque(self.unreported_stopped_processes)
+        res.extend(self.reported_stopped_processes)
+        return res
 
     def enqueue_process(self, process):
         self.ready_queue.append(process)
 
     def remove_process(self) -> None:
         self.ready_queue.pop(0)
+
+    def stop_process(self):
+        process = self.ready_queue.pop(0)
+        self.unreported_stopped_processes.append(process)
 
     # returns process or None
     def get_process_entry(self):
@@ -23,6 +35,13 @@ class Scheduler:
             self.ready_queue.append(first_process)
             process = self.ready_queue[0]
             return process
+
+    def resume_continued_processes(self):
+        for process in self.reported_stopped_processes.copy() + self.unreported_stopped_processes.copy():
+            if process.signal_set.is_pending(Signal.SIGCONT):
+                process.signal_set.unset_pending(Signal.SIGCONT)
+                self.reported_stopped_processes.remove(process)
+                self.enqueue_process(process)
 
     def update_processes_states(self, process, result: (str, Resource)):
         for index, (blocked_process, blocked_resource) in enumerate(self.blocked_queue):
