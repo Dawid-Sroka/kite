@@ -173,6 +173,10 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def getpid_syscall(self, process: ProcessImage):
+        process.cpu_context.reg_write(REG_RET_VAL1, process.pid)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def kill_syscall(self, process: ProcessImage):
         pid = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         signal = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG1))
@@ -527,6 +531,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                9:  Kernel.getpid_syscall,
                 10: Kernel.kill_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
