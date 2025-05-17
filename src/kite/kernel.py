@@ -66,17 +66,19 @@ class Kernel:
             pid, process_routine = process_entry
             # check pending signals mask
             logging.info(f"scheduling proces with PID {pid}")
-            result = next(process_routine)
+            self.simulator.reset_instruction_counter()
+            result = next(process_entry.process_routine)
             if result:
                 logging.info(f"process {pid} yielded: {result[0]} {result[1].resource}")
             else:
                 logging.info(f"process {pid} yielded")
-            self.scheduler.update_processes_states(pid, process_routine, result)
+            self.scheduler.update_processes_states(process_entry, result)
 
-    def add_new_process(self, process: ProcessImage):
+        if self.initial_term_settings:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.initial_term_settings)
+
+    def get_pid(self):
         new_pid = max(self.process_table.keys()) + 1
-        process.pid = new_pid
-        self.process_table[new_pid] = process
         return new_pid
 
     def process_routine(self, pid):
@@ -88,12 +90,11 @@ class Kernel:
             hardware_event = self.simulator.run()
             process.cpu_context = self.simulator.read_context_from_cpu()
             result = yield from self.react_to_event(process, hardware_event)
-            self.scheduler.update_processes_states(pid, self, result)
-            logging.info(f"execution result {self.dump_result(result)}")
+            self.scheduler.update_processes_states(process, result)
+            if result:
+                logging.info(f"execution result {self.dump_result(result)}")
 
     def dump_result(self, result):
-        if result is None:
-            return "None"
         action, resource = result
         return (action, resource.resource)
 

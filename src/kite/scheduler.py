@@ -1,8 +1,7 @@
 from kite.job_queue import JobQueue
 from kite.process import ProcessImage, Resource
-
-
-
+from collections import deque
+from kite.signals import Signal
 
 class Scheduler:
     def __init__(self):
@@ -20,32 +19,33 @@ class Scheduler:
         if len(self.ready_queue) == 0:
             return None
         else:
-            first_pid, first_process = self.ready_queue.pop(0)
-            self.ready_queue.append((first_pid, first_process))
-            pid, process = self.ready_queue[0]
-            return pid, process
+            first_process = self.ready_queue.pop(0)
+            self.ready_queue.append(first_process)
+            process = self.ready_queue[0]
+            return process
 
-    def update_processes_states(self, pid, process, result: (str, Resource)):
+    def update_processes_states(self, process, result: (str, Resource)):
+        for index, (blocked_process, blocked_resource) in enumerate(self.blocked_queue):
+            if blocked_resource.resource_type == "signal" and blocked_process.signal_set.get_any():
+                self.blocked_queue.pop(index)
+                self.ready_queue.append(blocked_process)
+
         if result is None:
             return
         action, resource = result
-        if action == "unblock":
-            # if resource.resource_type == "process state":
-            #     # wake up parent
-            #     process_waited_upon = resource.resource
+        if action == "unblock" or resource.resource_type == "stdin":
             for index, blocked_process in enumerate(self.blocked_queue):
-                blocked_pid, blocked_process, blocking_resource = blocked_process
+                blocked_process, blocking_resource = blocked_process
                 if blocking_resource.resource_type == resource.resource_type and \
                     resource.resource in blocking_resource.resource:
-                    # blocking_resource.resource == resource.resource:
                     self.blocked_queue.pop(index)
-                    self.ready_queue.append((blocked_pid, blocked_process))
-        if action == "block":
+                    self.ready_queue.append(blocked_process)
+        elif action == "block":
             self.ready_queue.pop(0)
-            self.blocked_queue.append((pid, process, resource))
+            self.blocked_queue.append((process, resource))
 
     def dump_ready_queue(self):
-        return [elem[0] for elem in self.ready_queue]
+        return [elem.pid for elem in self.ready_queue]
 
     def dump_blocked_queue(self):
-        return [(elem[0], elem[2].resource) for elem in self.blocked_queue]
+        return [(elem[0].pid, elem[1].resource) for elem in self.blocked_queue]
