@@ -146,15 +146,25 @@ class Kernel:
         else:
             result = syscall_dict[syscall_no](self, process)
         return result
-
-    def exit_syscall(self, process: ProcessImage):
-        logging.info("       Process exited!")
+    
+    def __exit(self, process, status):
         self.scheduler.remove_process()
         if process.pid == 1:    # I am init
-            yield ("unblock", Resource("child state" , process.pid))
+            return ("unblock", Resource("child state" , process.pid))
         parent = self.process_table[process.ppid]
-        parent.pending_signals[0] = 1
-        yield ("unblock", Resource("child state" , process.pid))
+        parent.signal_set.set_pending(Signal.SIGCHLD)
+        parent.zombies.append((process, status))
+        for fd in process.fdt.keys():
+            self.__unlink_fd(process, fd)
+        if LOG_FD_CHANGES:
+            logging.info(process.fdt)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+        return ("unblock", Resource("child state" , process.pid))
+
+    def exit_syscall(self, process: ProcessImage):
+        # TODO: reparent zombies to init
+        logging.info("       Process exited!")
+        yield self.__exit(process, STATUS_EXITED)
 
     def __modify_sysroot_path(self, path):
         if os.path.isabs(path):
