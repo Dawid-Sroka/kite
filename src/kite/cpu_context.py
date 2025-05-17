@@ -1,4 +1,3 @@
-from pyrisc.sim.components import Register, RegisterFile, Memory
 from kite.consts import *
 
 from pyrisc.sim.consts import *
@@ -46,10 +45,13 @@ class VMAreaStruct:
         else:
             return None
 
-
 class VMAreas:
-    def __init__(self):
-        self.vm_areas_list = []
+    def __init__(self, bitness):
+        key_func = lambda obj: obj.start_vpn
+        self.vm_areas_list = SortedList(key=key_func)
+        self.initial_brk = 0
+        self.brk = 0
+        self.bitness = bitness
 
     def translate(self,vpn) -> PageTableEntry | None:
         area = self.get_area_by_vpn(vpn)
@@ -76,6 +78,26 @@ class VMAreas:
         for i in range(count):
             self.copy_byte_in_vm(start_va + i, array_of_bytes[i])
 
+    def copy_byte_in_vm_as_kernel(self, va, byte_to_store):
+        page = self.get_physical_page(va)
+
+        if not page:
+            raise NotImplementedError("Kernel panic")
+        page[va & VPO_MASK] = byte_to_store
+
+    def copy_bytes_in_vm_as_kernel(self, start_va, array_of_bytes):
+        count = len(array_of_bytes)
+        for i in range(count):
+            self.copy_byte_in_vm_as_kernel(start_va + i, array_of_bytes[i])
+
+    def write_int(self, address, value):
+        bytes = value.to_bytes(4, byteorder='little')
+        self.copy_bytes_in_vm_as_kernel(address, bytes)
+
+    def write_long(self, address, value):
+        bytes = value.to_bytes(8, byteorder='little')
+        self.copy_bytes_in_vm_as_kernel(address, bytes)
+
     def load_byte_from_vm(self, va):
         vpn = va >> VPO_LENTGH
         VPO_MASK = 2**VPO_LENTGH - 1
@@ -95,6 +117,52 @@ class VMAreas:
             next_byte = self.load_byte_from_vm(start_va + i)
             returned_bytes.append(next_byte)
         return returned_bytes
+
+    def load_byte_from_vm_as_kernel(self, va):
+        page = self.get_physical_page(va)
+
+        if not page:
+            raise NotImplementedError("Kernel panic")
+
+        return page[va & VPO_MASK]
+
+    def load_bytes_from_vm_as_kernel(self, start_va, count):
+        return [self.load_byte_from_vm_as_kernel(start_va + i) for i in range(count)]
+
+    def read_int(self, address):
+        bytes = self.load_bytes_from_vm_as_kernel(address, INT_SIZE)
+        return int.from_bytes(bytes, 'little')
+
+    def read_pointer(self, address):
+        bytes = self.load_bytes_from_vm_as_kernel(address, self.bitness // 8)
+        return int.from_bytes(bytes, 'little')
+
+    def read_string(self, address):
+        d = ""
+        c = self.load_byte_from_vm_as_kernel(address)
+        while c != 0:
+            d += chr(c)
+            address += 1
+            c = self.load_byte_from_vm_as_kernel(address)
+        return d
+
+    def write_string(self, address, string):
+        bytes = string.encode('ascii') + b'\x00'
+        self.copy_bytes_in_vm_as_kernel(address, bytes)
+
+    # Read type: char *strings[]
+    def read_string_list(self, address):
+        # TODO: well, this is super naive, there should be some validation
+        offset = 0
+        result = []
+        while True:
+            arg_addr = self.read_pointer(address + offset)
+            if arg_addr == 0:
+                break
+            string = self.read_string(arg_addr)
+            result.append(string)
+            offset += 8
+        return result
 
     def copy_into_vm(self, va, data):
         vpn = va >> VPO_LENTGH
@@ -122,16 +190,24 @@ class VMAreas:
                 return area
         return None
 
+    def get_physical_page(self, addr):
+        vpn = addr >> VPO_LENTGH
+        area = self.get_area_by_va(addr)
+        if not area:
+            return None
+
+        page_offset = (vpn - area.start_vpn) << VPO_LENTGH
+        return memoryview(area.data)[page_offset:page_offset + PAGE_SIZE]
+
     def add_page_containing_addr(self, addr):
         vpn = addr >> VPO_LENTGH
         area = self.get_area_by_va(addr)
-        if area != None:
-            if vpn not in area.mapped_pages.keys():
-                page_offset = (vpn - area.start_vpn) << VPO_LENTGH
-                physical_page = bytearray(area.data[page_offset:page_offset + PAGE_SIZE])
-                area.mapped_pages[vpn] = PageTableEntry(vpn, area.vm_prot, physical_page)
-        else:
+        if not area:
             raise NotImplementedError
+        if vpn not in area.mapped_pages.keys():
+            page_offset = (vpn - area.start_vpn) << VPO_LENTGH
+            physical_page = memoryview(area.data)[page_offset:page_offset + PAGE_SIZE]
+            area.mapped_pages[vpn] = PageTableEntry(vpn, area.vm_prot, physical_page)
 
     def get_byte(self, pointer: int):
         vpn = pointer >> VPO_LENTGH
