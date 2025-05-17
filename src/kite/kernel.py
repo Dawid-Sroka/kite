@@ -173,6 +173,29 @@ class Kernel:
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
 
+    def fcntl_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        cmd = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        # TODO: actually implement F_GETFL and F_SETFL
+        supported_commands = [F_DUPFD, F_SETFD, F_GETFL]
+
+        if cmd not in supported_commands:
+            raise NotImplementedError(f"cmd {cmd} is not supported")
+
+        base = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+
+        ret_val = 0
+        if cmd == F_DUPFD:
+            newfd = max(max(process.fdt.keys()) + 1, base)
+            process.fdt[newfd] = process.fdt[fd]
+            process.fdt[newfd].ref_cnt += 1
+            ret_val = newfd
+            if LOG_FD_CHANGES:
+                logging.info(process.fdt)
+        process.cpu_context.reg_write(REG_RET_VAL1, ret_val)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def read_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         buff_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -362,5 +385,6 @@ syscall_dict = {
                 28: Kernel.execve_syscall,
                 30: Kernel.setpgid_syscall,
                 35: Kernel.chdir_syscall,
+                46: Kernel.fcntl_syscall,
                 86: Kernel.sigtimedwait_syscall,
                 }

@@ -136,6 +136,7 @@ syscall_names = {
                 28: "execve",
                 30: "setpgid",
                 35: "chdir",
+                46: "fcntl",
                 86: "sigtimedwait",
                 100: "debug print",
                 247: "wait"
@@ -155,3 +156,8 @@ VPO_LENTGH = 12
 PAGE_SIZE = 2 ** VPO_LENTGH
 VPO_MASK = 2**VPO_LENTGH - 1
 VPN_MASK = 2**32 - 1 - VPO_MASK
+# fcntl
+F_DUPFD = 0
+F_GETFL = 3
+F_SETFD = 2
+
