@@ -132,6 +132,7 @@ syscall_names = {
                 3:  "read",
                 4:  "write",
                 11: "fstat",
+                12: "sbrk",
                 13: "mmap",
                 15: "getdents",
                 18: "sigaction",

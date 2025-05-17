@@ -1,5 +1,5 @@
-from kite.cpu_context import VMAreaStruct
-from kite.process import ProcessImage, ProcessTable, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
+from kite.cpu_context import VMAreaStruct, M_READ_WRITE
+from kite.process import ProcessImage, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulators.simulator import Simulator
 from kite.signals import Signal, create_signal_context, SIG_BLOCK, SIG_UNBLOCK, SIG_SETMASK, SIG_DFL, SIG_IGN, default_action, DefaultAction, STATUS_EXITED, STATUS_SIGNALED, STATUS_STOPPED
@@ -173,6 +173,26 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def sbrk_syscall(self, process: ProcessImage):
+        increment = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        brk = process.cpu_context.vm.brk
+        process.cpu_context.reg_write(REG_RET_VAL1, brk)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
+        if brk + increment > MMAP_SEGMENTS_RANGE_START:
+            raise NotImplementedError("brk: no free memory left")
+
+        if increment < 0:
+            raise NotImplementedError("brk: negative increment is not supported")
+        if increment == 0:
+            return
+
+        vm_areas_list = process.cpu_context.vm.vm_areas_list
+        vm_areas_list.add(VMAreaStruct(brk, increment, M_READ_WRITE, 0, bytearray(increment)))
+
+        process.cpu_context.vm.brk += increment
+        logging.info(f'old brk = 0x{brk:x}, new brk = 0x{process.cpu_context.vm.brk:x}')
+
     def sigaction_syscall(self, process: ProcessImage):
         signal_number = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         new_action_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -490,6 +510,7 @@ syscall_dict = {
                 2:  Kernel.fork_syscall,
                 3:  Kernel.read_syscall,
                 4:  Kernel.write_syscall,
+                12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
                 18: Kernel.sigaction_syscall,
