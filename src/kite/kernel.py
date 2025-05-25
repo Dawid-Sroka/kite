@@ -2,6 +2,7 @@ from kite.cpu_context import VMAreaStruct
 from kite.process import ProcessImage, ProcessTable, TerminalFile, RegularFile, PipeBuffer, PipeReadEnd, PipeWriteEnd
 from kite.scheduler import Scheduler, Resource
 from kite.simulators.simulator import Simulator
+from kite.signals import Signal, create_signal_context, SIG_BLOCK, SIG_UNBLOCK, SIG_SETMASK, SIG_DFL, SIG_IGN, default_action, DefaultAction, STATUS_EXITED, STATUS_SIGNALED, STATUS_STOPPED
 
 from kite.consts import *
 from kite.loading import check_elf, parse_cpu_context_from_file
@@ -172,6 +173,24 @@ class Kernel:
     def close_syscall(self, process: ProcessImage):
         fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         del process.fdt[fd]
+    def sigaction_syscall(self, process: ProcessImage):
+        signal_number = INT(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
+        new_action_pointer = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+        # TODO: handle old action
+
+        try:
+            signal = Signal(signal_number)
+        except ValueError:
+            # TODO: handle it with errno and proper return value
+            raise NotImplementedError("Incorrect signal number")
+
+        data = process.cpu_context.vm.load_bytes_from_vm_as_kernel(new_action_pointer, Sigaction.SIZE)
+        new_action = Sigaction.unpack(bytes(data))
+        process.sigactions[signal.value] = new_action
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def wait4_syscall(self, process: ProcessImage):
         pid = LONG(process.cpu_context.reg_read(REG_SYSCALL_ARG0))
         status_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -473,6 +492,7 @@ syscall_dict = {
                 4:  Kernel.write_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
+                18: Kernel.sigaction_syscall,
                 20: Kernel.wait4_syscall,
                 24: Kernel.fstatat_syscall,
                 25: Kernel.pipe2_syscall,

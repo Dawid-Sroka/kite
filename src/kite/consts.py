@@ -134,6 +134,7 @@ syscall_names = {
                 11: "fstat",
                 13: "mmap",
                 15: "getdents",
+                18: "sigaction",
                 20: "wait4",
                 25: "pipe2",
                 28: "execve",
