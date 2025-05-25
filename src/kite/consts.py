@@ -143,6 +143,7 @@ syscall_names = {
                 17: "dup2",
                 18: "sigaction",
                 20: "wait4",
+                24: "fstatat",
                 25: "pipe2",
                 28: "execve",
                 30: "setpgid",

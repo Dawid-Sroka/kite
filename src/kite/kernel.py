@@ -163,6 +163,25 @@ class Kernel:
         process.fdt[fd] = ofo
         process.cpu_context.reg_write(REG_RET_VAL1, fd)
         logging.info(f"{process.fdt}")
+    def fstat_syscall(self, process: ProcessImage):
+        fd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
+        statbuf_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        # TODO: do we really want to pass all host values?
+
+        # Is file stdin, stdout or stderr?
+        if 0 <= fd <= 2:
+            stat_info = os.fstat(fd)
+        else:
+            file_path = process.fdt[fd].file_name
+            stat_info = os.stat(file_path)
+
+        stat_bytes = Stat.pack(stat_info)
+        process.cpu_context.vm.copy_bytes_in_vm_as_kernel(statbuf_ptr, stat_bytes)
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def dup2_syscall(self, process: ProcessImage):
         oldfd = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         newfd = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -659,6 +678,7 @@ syscall_dict = {
                 7:  Kernel.lseek_syscall,
                 9:  Kernel.getpid_syscall,
                 10: Kernel.kill_syscall,
+                11: Kernel.fstat_syscall,
                 12: Kernel.sbrk_syscall,
                 13: Kernel.mmap_syscall,
                 15: Kernel.getdents_syscall,
