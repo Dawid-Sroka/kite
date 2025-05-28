@@ -15,7 +15,7 @@ import inspect
 import os
 from copy import deepcopy
 from kite.struct_definitions import UContext, Sigaction, Stat, Termios, Dirent, convert_o_flags_netbsd_to_linux
-import signal
+from signal import SIGTERM, signal as host_signal
 import sys
 import termios
 from getdents import *
@@ -32,11 +32,52 @@ class Kernel:
         self.process_table = {}
         self.scheduler = scheduler
         self.open_files_table = []
+        self.foreground_process_group = 1
+        host_signal(SIGTERM, lambda signum, frame: self.restore_terminal_settings(signum, frame))
+        self.terminal = None
+
+        # In some cases (e.g. running on GH actions) accessing terminal
+        # settings is not allowed. In such case don't call tcgetattr/tcsetattr
+        try:
+            self.initial_term_settings = termios.tcgetattr(sys.stdin)
+        except:
+            self.initial_term_settings = None
+
+        # We handle ICANON by ourselves
+        if self.initial_term_settings:
+            attrs_to_update = deepcopy(self.initial_term_settings)
+            attrs_to_update[3] &= ~termios.ICANON
+            attrs_to_update[3] &= ~termios.ISIG
+            attrs_to_update[3] &= ~termios.ECHO
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, attrs_to_update)
+
+        sys.excepthook = self.handle_exception
+        self.current_process = None
+        self.cwd = self.sysroot
         self.special_files = {
             self.sysroot / "dev" / "uart": lambda: self.terminal,
             self.sysroot / "dev" / "tty": lambda: self.terminal,
             self.sysroot / "dev" / "procstat": lambda: procstat_creator(self)
         }
+
+    def restore_terminal_settings(self, _, frame):
+        if self.initial_term_settings:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.initial_term_settings)
+        sys.exit(0)
+
+    def handle_exception(self, exc_type, exc_value, exc_traceback):
+        if self.initial_term_settings:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.initial_term_settings)
+        
+        # Call the default excepthook to ensure normal failure behavior
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+    def handle_signal(self, signal):
+        if not self.foreground_process_group:
+            return
+        for process in self.process_table.values():
+            if process.pgid == self.foreground_process_group:
+                process.signal_set.set_pending(signal)
 
     @classmethod
     def create(cls, simulator: Simulator):
@@ -44,18 +85,21 @@ class Kernel:
         kernel = cls(simulator, scheduler)
         return kernel
 
-        init_image.fdt = {0: TerminalFile("stdin", stdin),
-                          1: TerminalFile("stdout", stdout),
-                          2: TerminalFile("stderr", stderr)}
     def start(self, arguments) -> None:
         # Create var directory
         (self.sysroot / 'var' / 'run').mkdir(parents=True, exist_ok=True)
 
         init_image = self.load_process_image_from_file(1, arguments[0], arguments)
+        self.terminal = TerminalFile("/dev/uart")
+        self.terminal.ref_cnt = 3
+        init_image.fdt = {0: self.terminal,
+                          1: self.terminal,
+                          2: self.terminal}
         self.process_table[1] = init_image
         self.scheduler.enqueue_process(init_image)
 
         while True:
+            self.terminal.handle_host_input(lambda x: self.handle_signal(x))
             self.scheduler.resume_continued_processes()
 
             process_entry = self.scheduler.get_process_entry()

@@ -72,20 +72,57 @@ class OpenFileObject():
     def __repr__(self):
         return f"{self.file_name} ref_cnt={self.ref_cnt}"
 
+SIGINT_CHAR = '\x03'
+SIGTSTP_CHAR = '\x1A'
+ESCAPE_CHAR = '\x1b'
 
 class TerminalFile(OpenFileObject):
+    def __init__(self, file_name):
+        super().__init__(file_name)
+        self.in_canonical_mode = True
+        self.echo_flag = True
+        self.isig_flag = True
+        self.buffer = []
+
+    def __is_end_character_of_escape_sequence(self, c):
+        return c in ['m', 'A', 'B', 'C', 'D', 'H', 'f', '~', 'R', 'Z', 's', 'u', 'J', 'K', 'L', 'M', 'P', 'X', '@', '|', '!']
+
+    def handle_host_input(self, handle_signal):
+        rlist, _, _ = select.select([sys.stdin], [], [], 0.0)
+        if rlist:
+            char = sys.stdin.read(1)
+            if self.isig_flag and char == SIGINT_CHAR:
+                handle_signal(Signal.SIGINT)
+            elif self.isig_flag and char == SIGTSTP_CHAR:
+                handle_signal(Signal.SIGTSTP)
+            else:
+                self.buffer += char
+                if self.echo_flag:
+                    sys.stdout.write(char)
+                # for some reason select won't notify us for remaining escape characters
+                if char == ESCAPE_CHAR:
+                    while True:
+                        char = sys.stdin.read(1)
+                        self.buffer += char
+                        if self.__is_end_character_of_escape_sequence(char):
+                            break
 
     def read(self, no_bytes_to_read):
-        chars_read = self.file_struct.read(no_bytes_to_read)
-        array_of_bytes_read = [ord(c) for c in chars_read]
-        return (array_of_bytes_read, None)
+        while True:
+            if len(self.buffer) >= no_bytes_to_read or (self.in_canonical_mode and len(self.buffer) > 0 and self.buffer[-1] == '\n'):
+                chars_number = min(len(self.buffer), no_bytes_to_read)
+                array_of_bytes_read = [ord(c) for c in self.buffer[:chars_number]]
+                self.buffer = self.buffer[chars_number:]
+                return (array_of_bytes_read, None)
+            else:
+                yield ("block", Resource("stdin", [self]))
 
     def write(self, array_of_bytes_to_write):
         string_to_write = ""
         for i in range(len(array_of_bytes_to_write)):
             string_to_write += chr(array_of_bytes_to_write[i])
-        no_bytes_written = self.file_struct.write(string_to_write)
-        self.file_struct.flush()
+        no_bytes_written = stdout.write(string_to_write)
+        stdout.flush()
         return (no_bytes_written, None)
 
 
