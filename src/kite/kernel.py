@@ -418,6 +418,33 @@ class Kernel:
         for reg in regs_to_update:
             process.cpu_context.reg_write(reg, reg_values[reg])
 
+    def ioctl_syscall(self, process: ProcessImage):
+        request = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
+
+        # TODO: every other ioctl will do nothing
+        if request == TIOCGPGRP:
+            pgrp_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+            process.cpu_context.vm.write_int(pgrp_ptr, self.foreground_process_group)
+        elif request == TIOCSPGRP:
+            pgrp_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+            pgid = process.cpu_context.vm.read_int(pgrp_ptr)
+            self.foreground_process_group = pgid
+        elif request == TIOCGETA:
+            termios_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+            attrs_bytes = Termios.pack(self.terminal.in_canonical_mode, self.terminal.isig_flag, self.terminal.echo_flag)
+            process.cpu_context.vm.copy_bytes_in_vm_as_kernel(termios_ptr, attrs_bytes)
+        elif request == TIOCSETAW or request == TIOCSETAF:
+            termios_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG2)
+            attrs_bytes = process.cpu_context.vm.load_bytes_from_vm_as_kernel(termios_ptr, Termios.SIZE)
+
+            icanon, isig, echo = Termios.unpack(bytes(attrs_bytes))
+            self.terminal.isig_flag = isig
+            self.terminal.in_canonical_mode = icanon
+            self.terminal.echo_flag = echo
+
+        process.cpu_context.reg_write(REG_RET_VAL1, 0)
+        process.cpu_context.reg_write(REG_RET_VAL2, 0)
+
     def getresuid_syscall(self, process: ProcessImage):
         ruid_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG0)
         euid_ptr = process.cpu_context.reg_read(REG_SYSCALL_ARG1)
@@ -913,6 +940,7 @@ syscall_dict = {
                 37: Kernel.sigaltstack_syscall,
                 38: Kernel.sigprocmask_syscall,
                 39: Kernel.setcontext_syscall,
+                40: Kernel.ioctl_syscall,
                 41: Kernel.getresuid_syscall,
                 42: Kernel.getresgid_syscall,
                 45: Kernel.issetugid_syscall,

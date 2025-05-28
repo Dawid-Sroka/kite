@@ -159,6 +159,7 @@ syscall_names = {
                 37: "sigaltstack",
                 38: "sigprocmask",
                 39: "setcontext",
+                40: "ioctl",
                 41: "getresuid",
                 42: "getresgid",
                 45: "issetugid",
@@ -212,3 +213,9 @@ F_DUPFD = 0
 F_GETFL = 3
 F_SETFD = 2
 
+# ioctl
+TIOCGPGRP = 0x40047477
+TIOCSPGRP = 0x80047476
+TIOCGETA = 0x402c7413
+TIOCSETAW = 0x802c7415
+TIOCSETAF = 0x802c7416
