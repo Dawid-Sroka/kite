@@ -45,6 +45,11 @@ def main(argv: List[str], log_to_stdout: bool = False, simulator: str = "unicorn
 
     logging.getLogger().addFilter(ContextFilter())
 
+    if debug:
+        if simulator != "unicorn":
+            raise NotImplementedError("Launching GDB server is only supported for unicorn")
+        simulator_obj.launch_gdb_server()
+
     kernel.start(argv)
 
 app()

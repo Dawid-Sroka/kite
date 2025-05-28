@@ -1,5 +1,6 @@
 from kite.cpu_context import VMAreas
 from kite.simulators.simulator import CPUContext
+from udbserver import udbserver
 
 from kite.consts import Event, MemEvent
 
@@ -128,6 +129,10 @@ class UnicornSimulator:
         UC_ERR_FETCH_UNMAPPED,
         UC_ERR_FETCH_PROT
     ]
+
+    def launch_gdb_server(self):
+        udbserver(self.cpu, 1234)
+        logging.info("GDB server has been created on port 1234")
 
     def reset_instruction_counter(self):
         self.instructions_left = self.CLOCK_CYCLES
