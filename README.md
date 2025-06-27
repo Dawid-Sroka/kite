@@ -49,8 +49,11 @@ You can get the compiled sources of [mimiker][1] by running the script:
 
 # Running Kite
 
-`kite` can run binary user programs compiled for RISC-V. The `programs` directory contains example programs written in C and a minimal library.
-
+`kite` can run binary user programs compiled for RISC-V. The `programs` directory contains example programs written in C and a minimal library. To compile these programs, run:
+```
+(cd programs && make)
+```
+To execute a ready binary under `kite`, run:
 ```
 python -u -m kite path/to/example_program
 ```
@@ -69,8 +72,10 @@ python -u -m kite path/to/example_program --simulator pyrisc
 
 # Testing
 
-For running tests, install `expect`.
-
+For running tests, install `expect`:
+```
+sudo apt install expect
+```
 Execute `test` script to run all tests:
 
 ```
@@ -87,7 +92,7 @@ Test cases can be run separately, e.g.:
 
 `kite` project currently supports compiling userspace programs linked with a minimal C library (not with the `mimiker` userspace). For this, RiscV compilator is needed. Usually (e.g. in Ubuntu) it can be obtained by downloading the package with a name `gcc-riscv64-linux-gnu`.
 ```
-apt install riscv64-linux-gnu-gcc
+apt install gcc-riscv64-linux-gnu
 ```
 Then you should be able to compile your own userspace programs using the Makefile provided in the project:
 ```
